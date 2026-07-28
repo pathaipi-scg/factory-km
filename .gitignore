@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Claude Code / local agent files (not for main)
+.claude/
+.agents/
+CLAUDE.md
+
+/venv
+.venv/
+/config.js
+
+# Local environment / credentials (test login)
+.env
+
+# Merge/patch conflict artifacts
+*.orig
+*.rej
+*.bak
+*.conflict
+*_BACKUP_*
+*_BASE_*
+*_LOCAL_*
+*_REMOTE_*

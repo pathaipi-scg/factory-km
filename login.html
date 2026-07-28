@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>เข้าสู่ระบบ — SmartFact KM</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: #212121;
+      color: #ececec;
+    }
+    .card {
+      width: 100%;
+      max-width: 360px;
+      background: #2f2f2f;
+      border: 1px solid #3a3a3a;
+      border-radius: 14px;
+      padding: 28px 26px 24px;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, .45);
+    }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    .sub { font-size: 13px; color: #9a9a9a; margin: 0 0 20px; }
+    label { display: block; font-size: 13px; margin: 14px 0 6px; color: #cfcfcf; }
+    input {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 9px;
+      border: 1px solid #3a3a3a;
+      background: #171717;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+    }
+    input:focus { border-color: #6f6f6f; }
+    button {
+      width: 100%;
+      margin-top: 22px;
+      padding: 12px;
+      border: 0;
+      border-radius: 9px;
+      background: #ececec;
+      color: #171717;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .6; cursor: default; }
+    .viewer-btn {
+      margin-top: 10px;
+      background: transparent;
+      border: 1px solid #3a3a3a;
+      color: #cfcfcf;
+      font-weight: 500;
+      font-size: 14px;
+    }
+    .viewer-btn:hover { background: #3a3a3a; }
+    .err {
+      margin-top: 14px;
+      font-size: 13px;
+      color: #ff8585;
+      min-height: 16px;
+      text-align: center;
+    }
+    .hint {
+      margin-top: 18px;
+      font-size: 12px;
+      color: #7a7a7a;
+      text-align: center;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+
+<body>
+  <form class="card" id="loginForm">
+    <h1>SmartFact KM</h1>
+    <p class="sub">เข้าสู่ระบบเพื่อใช้งาน</p>
+
+    <label for="username">Username</label>
+    <input id="username" name="username" autocomplete="username" autofocus required />
+
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required />
+
+    <button id="submitBtn" type="submit">เข้าสู่ระบบ</button>
+    <button id="viewerBtn" type="button" class="viewer-btn">👁️ เข้าแบบดูอย่างเดียว (ไม่ต้อง login)</button>
+    <div class="err" id="err"></div>
+
+    <div class="hint">ทดสอบ: factory / hr</div>
+  </form>
+
+  <script>
+    const form = document.getElementById("loginForm");
+    const errEl = document.getElementById("err");
+    const btn = document.getElementById("submitBtn");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      errEl.textContent = "";
+      btn.disabled = true;
+      btn.textContent = "กำลังเข้าสู่ระบบ...";
+      try {
+        const res = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: document.getElementById("username").value,
+            password: document.getElementById("password").value
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.success) {
+          window.location.href = "/";
+          return;
+        }
+        errEl.textContent = data.error || "เข้าสู่ระบบไม่สำเร็จ";
+      } catch (e) {
+        errEl.textContent = "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้";
+      }
+      btn.disabled = false;
+      btn.textContent = "เข้าสู่ระบบ";
+    });
+
+    // Viewer (read-only) — no password.
+    document.getElementById("viewerBtn").addEventListener("click", async () => {
+      errEl.textContent = "";
+      try {
+        const res = await fetch("/api/login/viewer", { method: "POST" });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.success) { window.location.href = "/"; return; }
+        errEl.textContent = data.error || "เข้าสู่ระบบไม่สำเร็จ";
+      } catch (e) {
+        errEl.textContent = "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้";
+      }
+    });
+  </script>
+</body>
+
+</html>

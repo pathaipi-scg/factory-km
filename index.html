@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>SCG Production AI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="stylesheet" href="assets/css/main.css">
+</head>
+<input type="file" id="fileInput" multiple hidden />
+
+<body class="sidebar-collapsed">
+
+  <div class="sidebar">
+    <div class="item" id="newChatBtn">✏️ New chat</div>
+    <input id="searchInput" placeholder="🔍 Search chats">
+    <h4>Your chats</h4>
+    <div id="chatList"></div>
+  </div>
+
+  <div class="main">
+    <div class="header">
+      <button id="sidebarToggle" class="sidebar-toggle" title="เปิด/ปิดแถบข้าง"
+        onclick="document.body.classList.toggle('sidebar-collapsed')"></button>
+      <div class="header-left">
+        <img src="./assets/img/scg_logo.png">
+      </div>
+      <div class="header-right">
+        <h2> Production AI</h2>
+        <span>SmartFact</span>
+      </div>
+      <div class="header-controls">
+        <button id="historyToggle" class="history-toggle" title="ประวัติคำถาม"
+          onclick="document.body.classList.toggle('history-open')">🕘</button>
+        <button id="logoutBtn" title="ออกจากระบบ / กลับหน้า login"
+          style="align-self:center;padding:7px 14px;border:1px solid #3a3a3a;border-radius:8px;background:#2f2f2f;color:#ececec;font-size:13px;cursor:pointer;"
+          onclick="fetch('/api/logout',{method:'POST'}).finally(function(){location.href='/login.html';});">
+          ↩ ออกจากระบบ
+        </button>
+      </div>
+    </div>
+
+    <div id="chat" class="chat"></div>
+
+    <div class="input-wrap">
+      <div id="modeIndicator" class="mode-indicator" style="padding:4px 12px;font-size:12px;color:#9a9a9a;"></div>
+      <div class="input-box">
+        <button id="plusBtn" class="plus-btn">+</button>
+        <div id="plusMenu" class="plus-menu">
+          <div data-upload="photo" class="write-only">📷 Add photo</div>
+          <div data-upload="file" class="write-only">📎 Add files</div>
+          <div id="trainKmMenuItem" class="write-only">🚀 Train KM</div>
+          <div id="askKmMenuItem">📚 Ask KM</div>
+          <div id="addSummaryMenuItem" class="write-only">📝 Add Summary</div>
+          <div>🎨 Create image</div>
+          <div>🤖 OpenAI</div>
+          <div>🎵 Suno</div>
+          <div>🧩 Canva</div>
+          <div>📘 NotebookLM</div>
+        </div>
+        <textarea id="input" placeholder="Message SCG Production AI..."></textarea>
+        <button id="sendBtn" class="send-btn">↑</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="history-panel">
+    <h4>🕘 ประวัติคำถาม</h4>
+    <div id="historyList"></div>
+  </div>
+
+  <div id="kmModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <h3 id="kmModalTitle">Select KM Destination</h3>
+      <div id="kmSelectedPath" class="km-selected-path">Selected: None</div>
+      <div id="kmTree" class="km-tree"></div>
+      <div class="modal-actions">
+        <button id="cancelKmUpload" class="modal-btn secondary">Cancel</button>
+        <button id="confirmKmUpload" class="modal-btn primary" disabled>Confirm Upload</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="trainKmModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content" style="max-width:800px;">
+      <h3>Train KM Knowledge</h3>
+      <div id="trainKmListArea">
+        <div style="text-align:center; color:#aaa;">Loading...</div>
+      </div>
+      <div class="modal-actions">
+        <button id="cancelTrainKm" class="modal-btn secondary">Cancel</button>
+        <button id="trainSelectedBtn" class="modal-btn primary" disabled>Train Selected</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="addSummaryModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content" style="max-width:800px;">
+      <h3>Add Summary (จากไฟล์ที่เทรนแล้ว)</h3>
+      <div id="addSummaryListArea">
+        <div style="text-align:center; color:#aaa;">Loading...</div>
+      </div>
+      <div class="modal-actions">
+        <button id="cancelAddSummary" class="modal-btn secondary">Cancel</button>
+        <button id="generateSummaryBtn" class="modal-btn primary" disabled>Generate Summary</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/config_multi.js"></script>
+  <script src="assets/js/ask_AI_multi.js"></script>
+
+</body>
+
+</html>

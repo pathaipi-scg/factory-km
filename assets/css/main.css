@@ -1,0 +1,283 @@
+/* ============================================================
+   SCG Production AI — neutral dark theme (plain grey, no neon)
+   CSS-only restyle. No HTML/JS structure changed.
+   ============================================================ */
+:root{
+  --bg-0:#212121;          /* app base / main      */
+  --bg-1:#171717;          /* sidebar / panels     */
+  --bg-2:#2f2f2f;          /* raised surfaces      */
+  --bg-3:#3a3a3a;          /* hover surfaces       */
+  --line:#3a3a3a;          /* hairline borders     */
+  --txt:#ececec;           /* primary text         */
+  --txt-dim:#9a9a9a;       /* muted text           */
+  --accent:#ececec;        /* light-on-dark button */
+  --accent-txt:#171717;    /* text on accent       */
+}
+
+*{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto}
+body{
+  margin:0;color:var(--txt);height:100vh;display:flex;
+  background:var(--bg-0);
+}
+
+/* SIDEBAR */
+.sidebar{
+  width:260px;padding:16px;overflow-y:auto;flex:none;
+  background:var(--bg-1);
+  border-right:1px solid var(--line);
+  transition:width .2s ease,padding .2s ease;
+}
+/* collapsed state (ChatGPT-style slide out); default on via body class */
+body.sidebar-collapsed .sidebar{
+  width:0;padding-left:0;padding-right:0;
+  overflow:hidden;border-right:none;
+}
+/* header toggle button — arrow reflects state (◀ collapse / ▶ open) */
+.sidebar-toggle{
+  width:38px;height:38px;border-radius:8px;flex:none;margin-right:4px;
+  background:transparent;border:none;color:var(--txt-dim);
+  font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .15s,color .15s;
+}
+.sidebar-toggle:hover{background:var(--bg-3);color:var(--txt)}
+.sidebar-toggle::before{content:"\276E"}                       /* ❮ = collapse */
+body.sidebar-collapsed .sidebar-toggle::before{content:"\276F"} /* ❯ = open   */
+.sidebar .item{
+  padding:10px;border-radius:10px;cursor:pointer;
+  display:flex;justify-content:space-between;align-items:center;
+  transition:background .15s;
+}
+.sidebar .item:hover{background:var(--bg-3)}
+.sidebar .item.active{background:var(--bg-2)}
+#newChatBtn{
+  background:var(--bg-2);border:1px solid var(--line);
+  color:var(--txt);font-weight:600;justify-content:center;
+}
+#newChatBtn:hover{background:var(--bg-3)}
+#searchInput{
+  width:100%;margin:12px 0;padding:9px 12px;border-radius:10px;
+  background:var(--bg-2);border:1px solid var(--line);color:var(--txt);outline:none;
+}
+#searchInput::placeholder{color:var(--txt-dim)}
+.sidebar h4{color:var(--txt-dim);font-weight:500;margin:20px 0 8px;letter-spacing:.04em}
+.chat-actions{display:none;gap:6px}
+.item:hover .chat-actions{display:flex}
+.chat-actions span{cursor:pointer;opacity:.7}
+.chat-actions span:hover{opacity:1}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+
+/* HEADER */
+.header{
+  display:flex;align-items:center;gap:14px;
+  padding:18px 28px;
+  background:var(--bg-1);
+  border-bottom:1px solid var(--line);
+}
+.header-left{display:flex;align-items:center}
+.header-left img{height:42px;display:block}
+.header-right{text-align:left;display:flex;flex-direction:column;justify-content:center;line-height:1.15}
+.header-right h2{
+  margin:0;font-size:26px;font-weight:700;color:var(--txt);
+}
+.header-right span{color:var(--txt-dim);font-size:14px}
+
+/* viewer (read-only) mode: hide write actions */
+body.viewer .write-only{display:none!important}
+body.viewer #logoutBtn{display:none!important}
+.viewer-badge{
+  margin-left:auto;align-self:center;padding:6px 12px;border-radius:8px;
+  background:rgba(255,255,255,.06);border:1px solid var(--line);
+  color:var(--txt-dim);font-size:13px;
+}
+
+/* CHAT */
+.chat{flex:1;padding:24px;overflow-y:auto;display:flex;flex-direction:column}
+.msg{
+  max-width:70%;padding:15px 18px;border-radius:18px;
+  margin-bottom:14px;line-height:1.6;
+  border:1px solid var(--line);animation:fadeIn .2s ease;
+}
+.msg.user{
+  background:var(--bg-2);
+  align-self:flex-start;
+  border-top-left-radius:6px;
+}
+.msg.bot{
+  background:var(--bg-2);
+  align-self:flex-end;
+  border-top-right-radius:6px;
+}
+
+/* INPUT — floating bar */
+.input-wrap{padding:14px 24px 22px}
+.mode-indicator{color:var(--txt-dim)!important}
+.input-box{
+  position:relative;display:flex;align-items:center;gap:8px;padding:8px;
+  background:var(--bg-2);
+  border:1px solid var(--line);
+  border-radius:22px;
+  box-shadow:0 4px 16px rgba(0,0,0,.35);
+}
+.plus-btn{
+  width:36px;height:36px;border-radius:50%;
+  background:var(--bg-3);color:var(--txt);border:1px solid var(--line);
+  font-size:22px;cursor:pointer;transition:background .15s;
+}
+.plus-btn:hover{background:var(--line)}
+.send-btn{
+  width:42px;height:42px;border-radius:50%;border:none;cursor:pointer;
+  font-size:20px;color:var(--accent-txt);
+  background:var(--accent);
+  transition:opacity .12s;
+}
+.send-btn:hover{opacity:.85}
+textarea{
+  flex:1;background:transparent;border:none;color:var(--txt);
+  resize:none;outline:none;font-size:15px;
+}
+textarea::placeholder{color:var(--txt-dim)}
+
+/* PLUS MENU */
+.plus-menu{
+  position:absolute;bottom:60px;left:0;
+  background:var(--bg-2);border:1px solid var(--line);border-radius:14px;
+  padding:10px;width:220px;display:none;
+  box-shadow:0 16px 40px rgba(0,0,0,.5);
+}
+.plus-menu div{padding:10px 14px;border-radius:9px;cursor:pointer}
+.plus-menu div:hover{background:var(--bg-3)}
+
+/* TYPING */
+.typingBubble{
+  display:flex;align-items:center;gap:10px;
+  background:var(--bg-2);
+  border:1px solid var(--line);
+  padding:10px 14px;border-radius:14px;width:fit-content;
+  animation:fadeIn .2s ease;
+}
+.typingSpinner{
+  width:16px;height:16px;border-radius:50%;
+  border:3px solid rgba(255,255,255,.18);border-top:3px solid var(--txt-dim);
+  animation:spin .8s linear infinite;
+}
+
+@keyframes spin{ to{ transform:rotate(360deg); } }
+@keyframes fadeIn{ from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:none} }
+
+/* MODALS */
+.modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:1000}
+.modal.hidden{display:none}
+.modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.7)}
+.modal-content{
+  position:relative;z-index:1;
+  background:var(--bg-2);
+  border:1px solid var(--line);
+  border-radius:20px;padding:24px;width:min(680px,95vw);max-height:80vh;
+  overflow:hidden;display:flex;flex-direction:column;gap:18px;
+  box-shadow:0 24px 70px rgba(0,0,0,.55);
+}
+.modal-content h3{margin:0;color:var(--txt);font-size:20px}
+.km-selected-path{color:var(--txt-dim);font-size:14px;min-height:24px}
+.km-tree{background:var(--bg-1);border:1px solid var(--line);border-radius:14px;padding:14px;
+  max-height:calc(80vh - 220px);overflow:auto}
+.km-tree ul{list-style:none;margin:0;padding-left:18px}
+.km-tree li{margin:4px 0;cursor:pointer;line-height:1.6}
+.km-tree li:hover{background:rgba(255,255,255,.06);border-radius:8px}
+.km-tree li.selected{background:rgba(255,255,255,.12);border-radius:8px}
+.km-tree li .toggle{margin-right:8px;color:var(--txt-dim)}
+.modal-actions{display:flex;justify-content:flex-end;gap:12px}
+.modal-btn{padding:10px 18px;border:none;border-radius:12px;cursor:pointer;font-weight:600}
+.modal-btn.primary{background:var(--accent);color:var(--accent-txt)}
+.modal-btn.secondary{background:var(--bg-3);color:var(--txt);border:1px solid var(--line)}
+.modal-btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* === Train KM Modal/Table Styling === */
+.km-train-table{width:100%;font-size:15px;border-collapse:separate;border-spacing:0 8px}
+.km-train-table th,.km-train-table td{padding:7px 8px;background:transparent}
+.km-train-table thead tr th{border-bottom:1px solid var(--line);color:var(--txt-dim);font-weight:500}
+.km-train-table tbody tr{background:var(--bg-1);border-radius:8px}
+.km-train-table tbody tr td{border-top:none;border-bottom:none}
+.km-train-table input[type="checkbox"]{width:18px;height:18px;accent-color:var(--accent)}
+
+/* The Train/Add-Summary lists can hold many files. The modal-content is a
+   flex column with a capped height and overflow:hidden, so the list itself
+   must scroll. flex:1 1 auto + min-height:0 lets it shrink within the modal
+   (instead of overflowing the clipped container) and show a scrollbar. */
+#trainKmListArea,#addSummaryListArea{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden}
+
+/* === Status toasts === */
+.toast-wrap{position:fixed;top:18px;right:18px;z-index:2000;display:flex;flex-direction:column;gap:12px;max-width:380px}
+.toast{
+  display:flex;align-items:flex-start;gap:12px;
+  background:var(--bg-2);
+  border:1px solid var(--line);border-left:4px solid var(--txt-dim);
+  border-radius:14px;padding:14px 16px;color:var(--txt);font-size:14px;
+  box-shadow:0 12px 34px rgba(0,0,0,.5);
+  animation:toastIn .25s cubic-bezier(.2,.8,.2,1);min-width:280px;
+}
+.toast.loading{border-left-color:var(--txt-dim)}
+.toast.success{border-left-color:#37d67a}
+.toast.error{border-left-color:#ff5b5b}
+.toast-body{flex:1;display:flex;flex-direction:column;gap:9px;min-width:0}
+.toast .toast-msg{line-height:1.45;word-break:break-word}
+.toast .toast-icon{font-size:19px;line-height:1.2}
+.toast-spinner{
+  width:18px;height:18px;flex:none;margin-top:1px;
+  border:3px solid rgba(255,255,255,.16);border-top:3px solid var(--txt-dim);border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+.toast-progress{height:6px;background:var(--bg-3);border-radius:99px;overflow:hidden;display:none}
+.toast-progress-bar{
+  height:100%;width:0%;border-radius:99px;
+  background:var(--accent);
+  transition:width .3s ease;
+}
+.toast .toast-close{cursor:pointer;opacity:.5;background:none;border:none;color:var(--txt);font-size:18px;line-height:1;padding:0;margin-top:-2px}
+.toast .toast-close:hover{opacity:1}
+
+@keyframes toastIn{ from{opacity:0;transform:translateX(40px)} to{opacity:1;transform:none} }
+
+/* spinner shown inside a busy button */
+.btn-spinner{
+  display:inline-block;width:14px;height:14px;vertical-align:-2px;margin-right:7px;
+  border:2px solid rgba(0,0,0,.3);border-top:2px solid var(--accent-txt);border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+
+/* === Header right-side controls === */
+.header-controls{margin-left:auto;display:flex;align-items:center;gap:10px}
+.history-toggle{
+  width:38px;height:38px;border-radius:8px;flex:none;
+  background:transparent;border:none;color:var(--txt-dim);
+  font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .15s,color .15s;
+}
+.history-toggle:hover{background:var(--bg-3);color:var(--txt)}
+body.history-open .history-toggle{background:var(--bg-3);color:var(--txt)}
+
+/* === Question history panel (right drawer) === */
+.history-panel{
+  width:0;flex:none;overflow:hidden;
+  background:var(--bg-1);border-left:1px solid var(--line);
+  transition:width .2s ease,padding .2s ease;
+  display:flex;flex-direction:column;
+}
+body.history-open .history-panel{width:300px;padding:16px}
+.history-panel h4{color:var(--txt-dim);font-weight:500;margin:0 0 12px;letter-spacing:.03em;white-space:nowrap}
+#historyList{flex:1;overflow-y:auto;min-height:0}
+.history-item{
+  padding:9px 10px;border-radius:8px;cursor:pointer;margin-bottom:6px;
+  display:flex;gap:8px;align-items:baseline;border:1px solid transparent;
+}
+.history-item:hover{background:var(--bg-2);border-color:var(--line)}
+.history-time{color:var(--txt-dim);font-size:11px;flex:none}
+.history-q{
+  font-size:13px;color:var(--txt);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.history-empty{color:var(--txt-dim);font-size:13px;padding:8px}
+
+/* flash a message when jumped to from history */
+.msg-highlight{outline:2px solid var(--txt-dim);outline-offset:3px}

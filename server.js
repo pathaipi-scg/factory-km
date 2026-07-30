@@ -29,6 +29,8 @@ console.log('PYTHON_BIN =', PYTHON_BIN);
 const CONFIG = require('./assets/js/config_multi.js');
 const PORT = process.env.PORT || 3006;
 const PUBLIC_ROOT = path.join(__dirname);
+const ASK_KM_PROVIDER = (process.env.ASK_KM_PROVIDER || 'node').trim().toLowerCase();
+const FASTAPI_ASK_KM_URL = process.env.FASTAPI_ASK_KM_URL || 'http://127.0.0.1:8000/api/ask_km';
 
 // --- Minimal .env loader (no dependency). Reads KEY=VALUE lines from a .env
 // file in the project root into process.env without overriding existing vars. ---
@@ -1183,6 +1185,42 @@ const server = http.createServer((req, res) => {
 
   // --- ASK_KM: Query trained KM knowledge ---
   if (req.method === 'POST' && url.pathname === '/api/ask_km') {
+    // Keep Node as the frontend-compatible entry point while allowing the
+    // FastAPI implementation to be enabled without a frontend change.
+    if (ASK_KM_PROVIDER === 'fastapi') {
+      try {
+        const targetUrl = new URL(FASTAPI_ASK_KM_URL);
+        const proto = targetUrl.protocol === 'https:' ? require('https') : require('http');
+        const fwdReq = proto.request(
+          {
+            method: req.method,
+            hostname: targetUrl.hostname,
+            port: targetUrl.port || (targetUrl.protocol === 'https:' ? 443 : 80),
+            path: targetUrl.pathname + (targetUrl.search || ''),
+            headers: {
+              'Content-Type': req.headers['content-type'] || 'application/json',
+              ...(req.headers['content-length'] ? { 'Content-Length': req.headers['content-length'] } : {})
+            }
+          },
+          askRes => {
+            res.writeHead(askRes.statusCode || 200, {
+              'Content-Type': askRes.headers['content-type'] || 'application/json'
+            });
+            askRes.pipe(res);
+          }
+        );
+        fwdReq.on('error', err => {
+          res.writeHead(502, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: err.message }));
+        });
+        req.pipe(fwdReq);
+      } catch (e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: e.message }));
+      }
+      return;
+    }
+
     console.log('ASK_KM HIT'); // log 
     let body = '';
 

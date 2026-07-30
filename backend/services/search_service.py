@@ -1,6 +1,7 @@
 """Compatibility facade for Folder Search context building."""
 
-from backend.models.search import SearchRequest, SearchResult
+from backend.models.search import SearchRequest
+from backend.services.prompt_builder import PromptBuilder
 from backend.services.repositories.km_vault_repository import KmVaultRepository
 from backend.services.search.folder_strategy import FolderSearchStrategy
 
@@ -20,26 +21,4 @@ class SearchService:
         result = self._folder_strategy.search(
             SearchRequest(query="", mode=mode, folder=folder)
         )
-        return self._format_context(result)
-
-    @staticmethod
-    def _format_context(result: SearchResult) -> str:
-        candidates = []
-        for index, hit in enumerate(result.hits, start=1):
-            metadata = hit.document.metadata
-            kind = (
-                "สรุป (summary)"
-                if metadata.get("kind") == "summary"
-                else "เอกสารเทรน (ฉบับเต็ม)"
-            )
-            header = (
-                f"=== เอกสารที่ {index} ===\n"
-                f"Source_File: {metadata.get('source_file') or '-'} | "
-                f"ประเภท: {kind}\n"
-                f"Category: {metadata.get('category') or '-'} | "
-                f"Machine: {metadata.get('machine') or '-'} | "
-                f"KM_ID: {metadata.get('km_id') or '-'}"
-            )
-            candidates.append(f"{header}\n\n{hit.document.content}")
-
-        return "\n\n---\n\n".join(candidates)
+        return PromptBuilder.build_context(result)

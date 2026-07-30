@@ -2,7 +2,10 @@
 
 from dataclasses import dataclass
 import os
-from urllib.parse import urlencode
+from pathlib import Path
+from urllib.parse import urlencode, urlsplit
+
+from dotenv import load_dotenv
 
 
 @dataclass(frozen=True)
@@ -18,7 +21,14 @@ class AzureOpenAISettings:
     @classmethod
     def from_environment(cls) -> "AzureOpenAISettings":
         """Create settings from the process environment."""
-        endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT", "").rstrip("/")
+        load_dotenv(Path(__file__).resolve().parents[2] / ".env", override=False)
+        configured_endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT", "").rstrip("/")
+        parsed_endpoint = urlsplit(configured_endpoint)
+        endpoint = (
+            f"{parsed_endpoint.scheme}://{parsed_endpoint.netloc}"
+            if parsed_endpoint.scheme and parsed_endpoint.netloc
+            else configured_endpoint
+        )
         api_key = os.environ.get("AZURE_OPENAI_API_KEY", "")
         if not endpoint or not api_key:
             raise ValueError(

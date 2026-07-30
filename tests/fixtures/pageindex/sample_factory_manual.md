@@ -1,4 +1,4 @@
-# Factory Manual
+gi# Factory Manual
 
 ## Safety checks
 Wear protective equipment before operating the mixer.

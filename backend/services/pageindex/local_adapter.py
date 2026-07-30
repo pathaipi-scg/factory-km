@@ -17,6 +17,7 @@ from backend.services.pageindex.adapter import PageIndexAdapter
 from backend.services.pageindex.local_reasoner import (
     LocalPageIndexNode,
     LocalPageIndexReasoner,
+    LocalReasonerUnavailableError,
     SelectionValidationError,
     validate_selections,
 )
@@ -101,6 +102,8 @@ class LocalPageIndexAdapter:
             selections = validate_selections(
                 raw_selections, nodes=nodes, max_results=self._max_results
             )
+        except LocalReasonerUnavailableError as error:
+            return self._warning_result("pageindex_reasoner_unavailable", str(error))
         except SelectionValidationError as error:
             return self._warning_result("pageindex_reasoner_invalid_output", str(error))
 

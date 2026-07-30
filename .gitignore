@@ -10,6 +10,9 @@ CLAUDE.md
 /venv
 .venv/
 /config.js
+.doc/
+/doc
+
 
 # Local environment / credentials (test login)
 .env

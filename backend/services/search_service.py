@@ -2,23 +2,17 @@
 
 from backend.models.search import SearchRequest
 from backend.services.prompt_builder import PromptBuilder
-from backend.services.repositories.km_vault_repository import KmVaultRepository
-from backend.services.search.folder_strategy import FolderSearchStrategy
+from backend.services.search.policy import SearchPolicy, create_folder_search_policy
 
 
 class SearchService:
     """Build the existing Folder Search context through normalized results."""
 
     def __init__(self, km_root: str | None = None) -> None:
-        self._repository = KmVaultRepository(km_root)
-        self._folder_strategy = FolderSearchStrategy(self._repository)
+        self._policy: SearchPolicy = create_folder_search_policy(km_root)
 
     def build_context(self, mode: str = "folder", folder: str = "") -> str:
         """Return the legacy prompt context for the current Folder Search flow."""
-        if mode != "folder":
-            raise NotImplementedError(f"Search mode is not implemented: {mode}")
-
-        result = self._folder_strategy.search(
-            SearchRequest(query="", mode=mode, folder=folder)
-        )
+        request = SearchRequest(query="", mode=mode, folder=folder)
+        result = self._policy.select(request).search(request)
         return PromptBuilder.build_context(result)

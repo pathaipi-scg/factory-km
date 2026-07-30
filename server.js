@@ -29,8 +29,6 @@ console.log('PYTHON_BIN =', PYTHON_BIN);
 const CONFIG = require('./assets/js/config_multi.js');
 const PORT = process.env.PORT || 3006;
 const PUBLIC_ROOT = path.join(__dirname);
-const ASK_KM_PROVIDER = (process.env.ASK_KM_PROVIDER || 'node').trim().toLowerCase();
-const FASTAPI_ASK_KM_URL = process.env.FASTAPI_ASK_KM_URL || 'http://127.0.0.1:8000/api/ask_km';
 
 // --- Minimal .env loader (no dependency). Reads KEY=VALUE lines from a .env
 // file in the project root into process.env without overriding existing vars. ---
@@ -49,6 +47,9 @@ const crypto = require('crypto');
     });
   } catch (e) { /* no .env: fall back to defaults / real environment */ }
 })();
+
+const ASK_KM_PROVIDER = (process.env.ASK_KM_PROVIDER || 'node').trim().toLowerCase();
+const FASTAPI_ASK_KM_URL = process.env.FASTAPI_ASK_KM_URL || 'http://127.0.0.1:8000/api/ask_km';
 
 // --- Rough login for testing. Two users; credentials come from .env (with safe
 // defaults so it still runs if .env is missing). Sessions are in-memory and

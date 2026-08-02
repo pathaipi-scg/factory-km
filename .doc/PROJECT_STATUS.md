@@ -19,6 +19,9 @@ Last updated: 2026-08-02
   `AUTH_FASTAPI_ENABLED`.
 - Vault Management domain, repository, authorization, orchestration, audit,
   and manifest-event contracts.
+- Core Domain phase 1 framework-neutral models for stable document and folder
+  identity, audit actors, responsibility-only ownership, documents, and
+  document versions.
 
 ## Active production behavior
 
@@ -79,7 +82,8 @@ implementation currently exists.
 
 ## Not implemented
 
-- Shared Core Domain Model code.
+- Core Domain models beyond phase 1, including shared Plant, Department,
+  Process, Machine, ManifestRecord, and IndexState models.
 - Dictionary runtime and training workflow.
 - LLM Wiki.
 - Knowledge Graph.

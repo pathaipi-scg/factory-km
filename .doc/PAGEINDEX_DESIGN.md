@@ -442,7 +442,41 @@ Workspace Migration
 
 ---
 
-# 19. AI Agent Rules
+# 19. Phase 2 Local Read-Only Workspace
+
+The production retrieval integration reads one pre-generated document from a
+local filesystem workspace. It never generates or modifies index data.
+
+Layout
+
+```text
+<PAGEINDEX_WORKSPACE_PATH>/
+  documents/
+    <PAGEINDEX_DOCUMENT_ID>/
+      document.json
+      structure.json
+      pages.json
+```
+
+`document.json` is one JSON object containing PageIndex document metadata.
+It must include a `doc_id` equal to `PAGEINDEX_DOCUMENT_ID`.
+
+`structure.json` is one JSON array of tree nodes. Every node requires
+`node_id`, `title`, `start_index`, and `end_index`. Optional fields are
+`summary` and nested `nodes`.
+
+`pages.json` is one JSON array ordered by source position. Every item requires
+an integer `page` and string `content`. Node ranges refer to these `page`
+values, inclusively.
+
+Phase 2 supports one configured document only. Missing, invalid, or corrupt
+workspace data falls back to Folder Search. Index generation, document
+mapping, synchronization, manifests, recovery, and workspace mutation remain
+out of scope.
+
+---
+
+# 20. AI Agent Rules
 
 Before modifying PageIndex
 
@@ -460,7 +494,7 @@ Do not assume anything outside these specifications.
 
 ---
 
-# 20. Design Principles
+# 21. Design Principles
 
 Incremental
 
@@ -475,4 +509,3 @@ Token Efficient
 Workspace Independent
 
 These principles must always be preserved.
-

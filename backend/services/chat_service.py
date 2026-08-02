@@ -21,6 +21,6 @@ class ChatService:
     ) -> dict[str, str]:
         """Answer an existing Folder Search request using the current contract."""
         del history, flow
-        context = self._search_service.build_context(mode="folder", folder=folder)
+        context = self._search_service.build_context(folder=folder, query=question)
         text = self._llm_service.generate(context=context, question=question)
         return {"text": text}

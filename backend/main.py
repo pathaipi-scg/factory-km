@@ -7,6 +7,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.routers.admin import router as admin_router
+from backend.routers.auth import register_auth_router
 from backend.routers.chat import router as chat_router
 from backend.routers.pageindex import router as pageindex_router
 from backend.routers.upload import router as upload_router
@@ -14,6 +15,7 @@ from backend.routers.wiki import router as wiki_router
 
 
 app = FastAPI(title="factory-km")
+register_auth_router(app)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ASSETS_DIRECTORY = PROJECT_ROOT / "assets"

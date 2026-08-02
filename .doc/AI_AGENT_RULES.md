@@ -424,4 +424,14 @@ Update Documentation (if architecture changed)
 
 This workflow should be followed for all future Factory-KM development.
 
+---
+
+## Configuration Rules
+
+- Load environment variables at the configuration boundary.
+- Do not depend on application bootstrap for configuration availability.
+- Configuration modules must work independently.
+- Normalize external endpoint URLs before use.
+- Prefer minimal fixes over architectural redesign.
+- Preserve backward compatibility whenever possible.
 

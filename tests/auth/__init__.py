@@ -1,0 +1,1 @@
+"""Focused authentication contract tests."""

@@ -3,9 +3,9 @@ from fastapi import Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 
+from backend.dependencies.search import create_search_service
 from backend.services.chat_service import ChatService
 from backend.services.llm_service import AzureOpenAIError, LLMService
-from backend.services.search_service import SearchService
 
 
 router = APIRouter()
@@ -13,7 +13,7 @@ router = APIRouter()
 
 def get_chat_service() -> ChatService:
     """Create the Ask-KM service only when the endpoint is requested."""
-    return ChatService(SearchService(), LLMService())
+    return ChatService(create_search_service(), LLMService())
 
 
 @router.post("/ask_km")

@@ -12,6 +12,17 @@ from .document import (
     OwnershipKind,
     StableDocumentId,
 )
+from .reference import (
+    Department,
+    DepartmentId,
+    Machine,
+    MachineId,
+    Plant,
+    PlantId,
+    Process,
+    ProcessId,
+    ReferenceLifecycle,
+)
 
 __all__ = [
     "ActorKind",
@@ -20,8 +31,17 @@ __all__ = [
     "DocumentKind",
     "DocumentStatus",
     "DocumentVersion",
+    "Department",
+    "DepartmentId",
     "FolderId",
+    "Machine",
+    "MachineId",
     "Ownership",
     "OwnershipKind",
+    "Plant",
+    "PlantId",
+    "Process",
+    "ProcessId",
+    "ReferenceLifecycle",
     "StableDocumentId",
 ]

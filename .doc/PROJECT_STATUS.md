@@ -22,6 +22,9 @@ Last updated: 2026-08-02
 - Core Domain phase 1 framework-neutral models for stable document and folder
   identity, audit actors, responsibility-only ownership, documents, and
   document versions.
+- Core Domain phase 2 framework-neutral Plant, Department, Process, and
+  Machine reference data with stable generated identities, changeable codes,
+  typed relationships, and active/inactive lifecycle state.
 
 ## Active production behavior
 
@@ -82,8 +85,7 @@ implementation currently exists.
 
 ## Not implemented
 
-- Core Domain models beyond phase 1, including shared Plant, Department,
-  Process, Machine, ManifestRecord, and IndexState models.
+- Core Domain models beyond phase 2, including ManifestRecord and IndexState.
 - Dictionary runtime and training workflow.
 - LLM Wiki.
 - Knowledge Graph.

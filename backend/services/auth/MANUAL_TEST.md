@@ -3,13 +3,18 @@
 The active Node.js login remains on port `3006`. These checks target only the
 isolated FastAPI service on `127.0.0.1:8000`.
 
-## 1. Prepare an isolated database
+## 1. Prepare SQL Server
 
-Set configuration in the shell used to start FastAPI:
+Confirm the existing `.env` contains the shared `SQL_SERVER`, `SQL_DB`,
+`SQL_USER`, and `SQL_PASS` settings. The configured SQL identity must be able
+to create the `auth` schema and its tables for the first migration. Do not add
+separate auth connection variables.
+
+Enable only the experimental FastAPI routes in the shell used to start the
+service:
 
 ```powershell
 $env:AUTH_FASTAPI_ENABLED = "true"
-$env:AUTH_SQLITE_PATH = "D:\AI\factory-km\data\auth-v2-test.sqlite3"
 ```
 
 Explicitly bootstrap the first admin once. Replace the example password before

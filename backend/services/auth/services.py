@@ -25,8 +25,8 @@ class CredentialUserRepository(UserRepository, Protocol):
     def get_password_hash(self, user_id: str) -> str | None: ...
 
 
-class SQLiteAuthenticationService:
-    """Authenticate active SQLite-backed users with Argon2id hashes."""
+class RepositoryAuthenticationService:
+    """Authenticate active repository-backed users with Argon2id hashes."""
 
     def __init__(
         self,
@@ -55,7 +55,7 @@ class SQLiteAuthenticationService:
         return viewer
 
 
-class SQLiteSessionService:
+class RepositorySessionService:
     """Create and validate Node-compatible opaque session tokens."""
 
     TOKEN_PATTERN = re.compile(r"^[0-9a-f]{48}$")
@@ -115,12 +115,12 @@ class SQLiteSessionService:
         return hashlib.sha256(token.encode("ascii")).hexdigest()
 
 
-class SQLiteCurrentUserService:
+class RepositoryCurrentUserService:
     """Resolve sessions into users, groups, roles, and authorization scopes."""
 
     def __init__(
         self,
-        sessions: SQLiteSessionService,
+        sessions: RepositorySessionService,
         users: UserRepository,
         groups: GroupRepository,
         roles: RoleRepository,
@@ -155,3 +155,9 @@ class SQLiteCurrentUserService:
             session_id=session.id,
             metadata={"viewer": "true" if session.viewer else "false"},
         )
+
+
+# Backward-compatible names retained while SQLite repository tests remain.
+SQLiteAuthenticationService = RepositoryAuthenticationService
+SQLiteSessionService = RepositorySessionService
+SQLiteCurrentUserService = RepositoryCurrentUserService

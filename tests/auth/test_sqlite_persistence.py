@@ -1,15 +1,12 @@
 """Focused tests for SQLite authentication persistence."""
 
 import hashlib
-import os
 import sqlite3
 import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from unittest.mock import patch
 
-from backend.config.auth import AuthSettings
 from backend.models.auth import (
     Group,
     Role,
@@ -33,7 +30,6 @@ from backend.repositories.auth.sqlite import (
     SQLiteSessionRepository,
     SQLiteUserRepository,
 )
-from backend.services.auth.bootstrap import bootstrap_first_admin
 from backend.services.auth.passwords import PasswordHasher
 
 
@@ -170,43 +166,6 @@ class SQLiteAuthPersistenceTests(unittest.TestCase):
             ).fetchone()
         self.assertEqual(row["token_digest"], token_digest)
         self.assertNotEqual(row["token_digest"], token)
-
-    def test_admin_bootstrap_is_explicit_and_single_use(self) -> None:
-        fresh_path = Path(self._temporary_directory.name) / "bootstrap.sqlite3"
-        settings = AuthSettings(fresh_path)
-
-        result = bootstrap_first_admin(
-            settings,
-            username="admin",
-            password="a strong bootstrap password",
-            display_name="Administrator",
-        )
-
-        self.assertEqual(result.user.username, "admin")
-        self.assertEqual(result.role.name, "admin")
-        database = AuthSQLiteDatabase(fresh_path)
-        stored_hash = SQLiteUserRepository(database).get_password_hash(result.user.id)
-        self.assertTrue(PasswordHasher().verify(stored_hash, "a strong bootstrap password"))
-        with self.assertRaises(RuntimeError):
-            bootstrap_first_admin(
-                settings,
-                username="second-admin",
-                password="another strong password",
-                display_name="Second Administrator",
-            )
-
-    def test_auth_database_path_is_environment_configurable(self) -> None:
-        configured = Path(self._temporary_directory.name) / "configured.sqlite3"
-        with patch.dict(
-            os.environ,
-            {"AUTH_SQLITE_PATH": str(configured)},
-            clear=True,
-        ):
-            settings = AuthSettings.from_environment()
-
-        self.assertEqual(settings.sqlite_path, configured)
-        self.assertFalse(configured.exists())
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -3,10 +3,13 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from fastapi import FastAPI
 
 from backend.config.auth import AuthSettings
+from backend.config.mssql import MSSQLSettings
+from backend.services.auth.composition import AuthDatabaseStatus
 from backend.repositories.auth.sqlite import AuthSQLiteDatabase
 from backend.routers.auth import auth_status, register_auth_router
 
@@ -30,7 +33,7 @@ class AuthActivationTests(unittest.TestCase):
     def test_disabled_router_registers_no_temporary_or_active_paths(self) -> None:
         app = FastAPI()
 
-        registered = register_auth_router(app, AuthSettings(self.database_path))
+        registered = register_auth_router(app, AuthSettings())
         paths = {path for _, path in self._route_methods(app)}
 
         self.assertFalse(registered)
@@ -42,7 +45,10 @@ class AuthActivationTests(unittest.TestCase):
 
     def test_enabled_router_uses_only_the_temporary_prefix(self) -> None:
         app = FastAPI()
-        settings = AuthSettings(self.database_path, fastapi_enabled=True)
+        settings = AuthSettings(
+            fastapi_enabled=True,
+            mssql=MSSQLSettings("server", "database", "user", "password"),
+        )
 
         registered = register_auth_router(app, settings)
         routes = self._route_methods(app)
@@ -63,10 +69,10 @@ class AuthActivationTests(unittest.TestCase):
         )
         self.assertEqual(app.state.auth_settings, settings)
 
-    def test_status_reports_enabled_reachable_initialized_schema(self) -> None:
-        settings = AuthSettings(self.database_path, fastapi_enabled=True)
-        AuthSQLiteDatabase(self.database_path).initialize()
-
+    @patch("backend.routers.auth.inspect_auth_database")
+    def test_status_reports_enabled_reachable_initialized_schema(self, inspect) -> None:
+        settings = AuthSettings(fastapi_enabled=True)
+        inspect.return_value = AuthDatabaseStatus(True, True)
         result = auth_status(settings)
 
         self.assertEqual(
@@ -78,10 +84,10 @@ class AuthActivationTests(unittest.TestCase):
             },
         )
 
-    def test_status_reports_unreachable_without_sensitive_values(self) -> None:
-        missing_parent = Path(self._temporary_directory.name) / "missing" / "auth.sqlite3"
-        settings = AuthSettings(missing_parent, fastapi_enabled=True)
-
+    @patch("backend.routers.auth.inspect_auth_database")
+    def test_status_reports_unreachable_without_sensitive_values(self, inspect) -> None:
+        settings = AuthSettings(fastapi_enabled=True)
+        inspect.return_value = AuthDatabaseStatus(False, False)
         result = auth_status(settings)
 
         self.assertEqual(
@@ -92,7 +98,7 @@ class AuthActivationTests(unittest.TestCase):
                 "schema_initialized": False,
             },
         )
-        self.assertNotIn(str(missing_parent), str(result))
+        self.assertNotIn("password", str(result).lower())
 
 
 if __name__ == "__main__":

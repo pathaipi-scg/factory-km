@@ -12,6 +12,11 @@ from .document import (
     OwnershipKind,
     StableDocumentId,
 )
+from .factory_context import (
+    FactoryConfiguration,
+    FactoryContext,
+    FactoryIdentity,
+)
 from .reference import (
     Department,
     DepartmentId,
@@ -34,6 +39,9 @@ __all__ = [
     "Department",
     "DepartmentId",
     "FolderId",
+    "FactoryConfiguration",
+    "FactoryContext",
+    "FactoryIdentity",
     "Machine",
     "MachineId",
     "Ownership",

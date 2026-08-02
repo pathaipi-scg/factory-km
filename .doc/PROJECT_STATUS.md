@@ -10,7 +10,9 @@ Last updated: 2026-08-02
 - Folder Search fallback for missing, unavailable, invalid, or corrupt
   PageIndex runtime data.
 - Authentication domain contracts and migration plan.
-- SQLite authentication schema, repositories, and migrations.
+- Microsoft SQL Server authentication schema, repositories, and idempotent
+  migrations using the shared `SQL_SERVER`, `SQL_DB`, `SQL_USER`, and
+  `SQL_PASS` configuration.
 - Argon2id password hashing and explicit first-admin bootstrap.
 - FastAPI authentication services for credentials, viewer sessions, session
   lifecycle, and current-user resolution.
@@ -25,6 +27,9 @@ Last updated: 2026-08-02
 - Core Domain phase 2 framework-neutral Plant, Department, Process, and
   Machine reference data with stable generated identities, changeable codes,
   typed relationships, and active/inactive lifecycle state.
+- Factory Context framework-neutral models pairing a stable factory identity
+  with one plant's database, Vault, PageIndex, Dictionary, Wiki, and chat
+  configuration boundaries.
 
 ## Active production behavior
 
@@ -38,6 +43,9 @@ Last updated: 2026-08-02
 - `AUTH_FASTAPI_ENABLED` defaults to `false`; when false, the experimental
   router is not registered.
 - Node and FastAPI sessions are not shared.
+- Experimental FastAPI authentication now composes SQL Server persistence;
+  the previous SQLite implementation remains only as inactive compatibility
+  code and a regression-test fixture.
 - `KM_SEARCH_MODE` defaults to `folder`.
 - PageIndex mode reads pre-generated local `document.json`, `structure.json`,
   and `pages.json` data and falls back to Folder Search on failure.
@@ -91,3 +99,5 @@ implementation currently exists.
 - Knowledge Graph.
 - Conversation Memory.
 - Multi-factory support.
+  Factory Context models exist, but loading, selection, persistence, and
+  runtime integration are not implemented.

@@ -16,30 +16,40 @@ from backend.dependencies.auth import get_auth_runtime
 from backend.models.auth import Role, Session, User, UserRoleMembership
 from backend.repositories.auth.sqlite import (
     AuthSQLiteDatabase,
+    SQLiteGroupRepository,
     SQLiteMembershipRepository,
     SQLiteRoleRepository,
     SQLiteSessionRepository,
     SQLiteUserRepository,
 )
 from backend.routers.auth import current_user, login, login_viewer, logout
-from backend.services.auth.composition import create_auth_runtime
+from backend.services.auth.composition import AuthRuntime
 from backend.services.auth.passwords import PasswordHasher
-from backend.services.auth.services import SQLiteSessionService
+from backend.services.auth.services import (
+    SQLiteAuthenticationService,
+    SQLiteCurrentUserService,
+    SQLiteSessionService,
+)
 
 
 class AuthServiceAndEndpointTests(unittest.TestCase):
     def setUp(self) -> None:
         self._temporary_directory = tempfile.TemporaryDirectory()
         self.database_path = Path(self._temporary_directory.name) / "auth.sqlite3"
-        self.settings = AuthSettings(
-            self.database_path,
-            fastapi_enabled=True,
-            session_max_age_seconds=86400,
-        )
+        self.settings = AuthSettings(fastapi_enabled=True, session_max_age_seconds=86400)
         self.database = AuthSQLiteDatabase(self.database_path)
         self.database.initialize()
         self._seed_identities()
-        self.runtime = create_auth_runtime(self.settings)
+        users = SQLiteUserRepository(self.database)
+        groups = SQLiteGroupRepository(self.database)
+        roles = SQLiteRoleRepository(self.database)
+        memberships = SQLiteMembershipRepository(self.database)
+        sessions = SQLiteSessionService(SQLiteSessionRepository(self.database))
+        self.runtime = AuthRuntime(
+            SQLiteAuthenticationService(users),
+            sessions,
+            SQLiteCurrentUserService(sessions, users, groups, roles, memberships),
+        )
 
     def tearDown(self) -> None:
         self._temporary_directory.cleanup()
@@ -239,7 +249,7 @@ class AuthServiceAndEndpointTests(unittest.TestCase):
 
     def test_feature_flag_defaults_to_disabled_behavior(self) -> None:
         with self.assertRaises(HTTPException) as context:
-            get_auth_runtime(AuthSettings(self.database_path))
+            get_auth_runtime(AuthSettings())
 
         self.assertEqual(context.exception.status_code, 503)
         self.assertEqual(context.exception.detail, "FastAPI authentication is disabled.")

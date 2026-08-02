@@ -1,22 +1,22 @@
-"""Disabled-by-default runtime composition for FastAPI authentication."""
+"""Disabled-by-default SQL Server composition for FastAPI authentication."""
 
 from dataclasses import dataclass
-import sqlite3
 
 from backend.config.auth import AuthSettings
-from backend.db.auth_migrations import MIGRATIONS
-from backend.repositories.auth.sqlite import (
-    AuthSQLiteDatabase,
-    SQLiteGroupRepository,
-    SQLiteMembershipRepository,
-    SQLiteRoleRepository,
-    SQLiteSessionRepository,
-    SQLiteUserRepository,
+from backend.db.auth_mssql_migrations import AUTH_MSSQL_MIGRATIONS
+from backend.db.mssql import MSSQLConnectionFactory
+from backend.repositories.auth.mssql import (
+    AuthMSSQLDatabase,
+    MSSQLGroupRepository,
+    MSSQLMembershipRepository,
+    MSSQLRoleRepository,
+    MSSQLSessionRepository,
+    MSSQLUserRepository,
 )
 from backend.services.auth.services import (
-    SQLiteAuthenticationService,
-    SQLiteCurrentUserService,
-    SQLiteSessionService,
+    RepositoryAuthenticationService,
+    RepositoryCurrentUserService,
+    RepositorySessionService,
 )
 
 
@@ -24,9 +24,9 @@ from backend.services.auth.services import (
 class AuthRuntime:
     """Concrete services used by the disabled compatibility router."""
 
-    authentication: SQLiteAuthenticationService
-    sessions: SQLiteSessionService
-    current_users: SQLiteCurrentUserService
+    authentication: RepositoryAuthenticationService
+    sessions: RepositorySessionService
+    current_users: RepositoryCurrentUserService
 
 
 @dataclass(frozen=True)
@@ -38,23 +38,25 @@ class AuthDatabaseStatus:
 
 
 def create_auth_runtime(settings: AuthSettings) -> AuthRuntime:
-    """Compose SQLite auth services only when explicitly enabled."""
+    """Compose SQL Server auth services only when explicitly enabled."""
     if not settings.fastapi_enabled:
         raise RuntimeError("FastAPI authentication is disabled.")
-    database = AuthSQLiteDatabase(settings.sqlite_path)
+    if settings.mssql is None:
+        raise RuntimeError("Shared SQL Server settings are not configured.")
+    database = AuthMSSQLDatabase(MSSQLConnectionFactory(settings.mssql))
     database.initialize()
-    users = SQLiteUserRepository(database)
-    groups = SQLiteGroupRepository(database)
-    roles = SQLiteRoleRepository(database)
-    memberships = SQLiteMembershipRepository(database)
-    sessions = SQLiteSessionService(
-        SQLiteSessionRepository(database),
+    users = MSSQLUserRepository(database)
+    groups = MSSQLGroupRepository(database)
+    roles = MSSQLRoleRepository(database)
+    memberships = MSSQLMembershipRepository(database)
+    sessions = RepositorySessionService(
+        MSSQLSessionRepository(database),
         max_age_seconds=settings.session_max_age_seconds,
     )
     return AuthRuntime(
-        authentication=SQLiteAuthenticationService(users),
+        authentication=RepositoryAuthenticationService(users),
         sessions=sessions,
-        current_users=SQLiteCurrentUserService(
+        current_users=RepositoryCurrentUserService(
             sessions,
             users,
             groups,
@@ -66,43 +68,40 @@ def create_auth_runtime(settings: AuthSettings) -> AuthRuntime:
 
 def inspect_auth_database(settings: AuthSettings) -> AuthDatabaseStatus:
     """Inspect database availability without initializing or migrating it."""
-    database = AuthSQLiteDatabase(settings.sqlite_path)
+    if settings.mssql is None:
+        return AuthDatabaseStatus(False, False)
+    database = AuthMSSQLDatabase(MSSQLConnectionFactory(settings.mssql))
     try:
         with database.connect() as connection:
-            connection.execute("SELECT 1").fetchone()
-            migration_table = connection.execute(
-                """
-                SELECT 1 FROM sqlite_master
-                WHERE type = 'table' AND name = 'schema_migrations'
-                """
-            ).fetchone()
+            cursor = connection.cursor()
+            cursor.execute("SELECT 1").fetchone()
+            cursor.execute("SELECT OBJECT_ID(N'auth.SchemaMigrations', N'U')")
+            migration_table = cursor.fetchone()[0]
             if not migration_table:
                 return AuthDatabaseStatus(True, False)
-            latest_version = max(version for version, _ in MIGRATIONS)
-            migration = connection.execute(
+            latest_version = max(version for version, _ in AUTH_MSSQL_MIGRATIONS)
+            cursor.execute(
                 """
-                SELECT 1 FROM schema_migrations
-                WHERE component = 'auth' AND version = ?
+                SELECT 1 FROM auth.SchemaMigrations
+                WHERE Component = ? AND Version = ?
                 """,
-                (latest_version,),
-            ).fetchone()
-            required_tables = {
-                "users",
-                "groups",
-                "roles",
-                "user_group_memberships",
-                "user_role_memberships",
-                "sessions",
-            }
-            existing_tables = {
-                str(row["name"])
-                for row in connection.execute(
-                    "SELECT name FROM sqlite_master WHERE type = 'table'"
-                )
-            }
+                "auth",
+                latest_version,
+            )
+            migration = cursor.fetchone()
+            cursor.execute(
+                """
+                SELECT COUNT(*) FROM sys.tables AS tables
+                JOIN sys.schemas AS schemas ON schemas.schema_id = tables.schema_id
+                WHERE schemas.name = N'auth' AND tables.name IN
+                    (N'Users', N'Groups', N'Roles', N'UserGroupMemberships',
+                     N'UserRoleMemberships', N'Sessions')
+                """
+            )
+            table_count = int(cursor.fetchone()[0])
             return AuthDatabaseStatus(
                 True,
-                migration is not None and required_tables.issubset(existing_tables),
+                migration is not None and table_count == 6,
             )
-    except (OSError, sqlite3.Error):
+    except Exception:
         return AuthDatabaseStatus(False, False)

@@ -19,6 +19,10 @@ The generated Markdown becomes the permanent knowledge stored in Factory-KM.
 
 Only successfully trained Markdown is searchable.
 
+The Vault root is supplied by `KM_VAULT_ROOT`. Both local Windows paths and
+remote SMB UNC paths are supported. An explicitly configured unavailable Vault
+is an error and never falls back to a different local Vault.
+
 ---
 
 # 2. Supported Input

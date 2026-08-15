@@ -50,6 +50,7 @@ const crypto = require('crypto');
 
 const ASK_KM_PROVIDER = (process.env.ASK_KM_PROVIDER || 'node').trim().toLowerCase();
 const FASTAPI_ASK_KM_URL = process.env.FASTAPI_ASK_KM_URL || 'http://127.0.0.1:8000/api/ask_km';
+const FASTAPI_TRAINING_URL = process.env.FASTAPI_TRAINING_URL || 'http://127.0.0.1:8000';
 
 // --- Rough login for testing. Two users; credentials come from .env (with safe
 // defaults so it still runs if .env is missing). Sessions are in-memory and
@@ -94,7 +95,103 @@ function readReqBody(req) {
     req.on('end', () => resolve(b));
   });
 }
-const KM_ROOT = process.env.KM_VAULT_ROOT || 'D:\\KM\\Vault';
+
+// Stream an approved Training request through the existing Node auth gateway.
+// Node owns browser sessions; FastAPI is loopback-only and trusts the explicit
+// gateway headers instead of enabling the separate FastAPI auth migration.
+function proxyTrainingRequest(req, res, pathname, session) {
+  const target = new URL(pathname, FASTAPI_TRAINING_URL);
+  const headers = {
+    'X-Factory-KM-Gateway': 'node',
+    'X-Factory-KM-Role': session ? session.role : 'reader'
+  };
+  if (req.headers['content-type']) headers['Content-Type'] = req.headers['content-type'];
+  if (req.headers['content-length']) headers['Content-Length'] = req.headers['content-length'];
+  const upstream = http.request({
+    method: req.method,
+    hostname: target.hostname,
+    port: target.port || 80,
+    path: target.pathname + target.search,
+    headers
+  }, upstreamRes => {
+    const responseHeaders = {};
+    if (upstreamRes.headers['content-type']) {
+      responseHeaders['Content-Type'] = upstreamRes.headers['content-type'];
+    }
+    res.writeHead(upstreamRes.statusCode || 502, responseHeaders);
+    upstreamRes.pipe(res);
+  });
+  upstream.on('error', error => {
+    console.error(`FastAPI Training proxy failed for ${pathname}:`, error.message);
+    if (!res.headersSent) {
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+    }
+    res.end(JSON.stringify({ success: false, error: 'FastAPI Training API unavailable' }));
+  });
+  req.pipe(upstream);
+}
+const KM_VAULT_ROOT_CONFIGURED = Object.prototype.hasOwnProperty.call(process.env, 'KM_VAULT_ROOT');
+const KM_VAULT_ROOT_RAW = KM_VAULT_ROOT_CONFIGURED ? process.env.KM_VAULT_ROOT : 'D:\\KM\\Vault';
+if (!KM_VAULT_ROOT_RAW || !KM_VAULT_ROOT_RAW.trim()) {
+  throw new Error('KM_VAULT_ROOT is configured but empty.');
+}
+const KM_ROOT = path.resolve(KM_VAULT_ROOT_RAW.trim());
+
+function requireVaultReadable() {
+  try {
+    const stats = fs.statSync(KM_ROOT);
+    if (!stats.isDirectory()) throw new Error('not a directory');
+    fs.accessSync(KM_ROOT, fs.constants.R_OK);
+    fs.readdirSync(KM_ROOT);
+  } catch (error) {
+    throw new Error(`KM Vault is unavailable or unreadable: ${KM_ROOT}`);
+  }
+}
+
+function requireVaultWritable() {
+  requireVaultReadable();
+  const probe = path.join(KM_ROOT, `.factory-km-write-${process.pid}-${Date.now()}.tmp`);
+  let descriptor;
+  try {
+    descriptor = fs.openSync(probe, 'wx');
+    fs.closeSync(descriptor);
+    descriptor = undefined;
+    fs.unlinkSync(probe);
+  } catch (error) {
+    try { if (descriptor !== undefined) fs.closeSync(descriptor); } catch { /* best effort */ }
+    try { if (fs.existsSync(probe)) fs.unlinkSync(probe); } catch { /* best effort */ }
+    throw new Error(`KM Vault is not writable: ${KM_ROOT}`);
+  }
+}
+
+function sameWindowsPath(left, right) {
+  return path.resolve(left).replace(/[\\/]+$/, '').toLowerCase()
+    === path.resolve(right).replace(/[\\/]+$/, '').toLowerCase();
+}
+
+function requireMatchingFastApiVault(callback) {
+  const healthUrl = new URL('/health', FASTAPI_TRAINING_URL);
+  const request = http.get(healthUrl, response => {
+    let body = '';
+    response.on('data', chunk => { body += chunk.toString(); });
+    response.on('end', () => {
+      try {
+        const health = JSON.parse(body);
+        if (response.statusCode !== 200 || health.health !== 'ok' || !health.vaultRoot) {
+          throw new Error('FastAPI Vault health is unavailable');
+        }
+        if (!sameWindowsPath(KM_ROOT, health.vaultRoot)) {
+          throw new Error(`Vault root mismatch: Node=${KM_ROOT}, FastAPI=${health.vaultRoot}`);
+        }
+        callback(null);
+      } catch (error) {
+        callback(error);
+      }
+    });
+  });
+  request.setTimeout(5000, () => request.destroy(new Error('FastAPI Vault health timed out')));
+  request.on('error', callback);
+}
 // Plant tag written into generated CB/Jarvis case files (YAML `plant:` field).
 // This server is the CB site, so default to CB; override via CASE_PLANT env
 // (e.g. a local dev box can set CASE_PLANT=test).
@@ -542,9 +639,37 @@ const server = http.createServer((req, res) => {
     console.log('isIgnoredDir("KM_20260602_095214"):', isIgnoredDir('KM_20260602_095214'));
     console.log('==============================\n');
 
+    try {
+      requireVaultReadable();
+    } catch (error) {
+      res.writeHead(503, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: error.message }));
+      return;
+    }
     const folders = readFolderTree(KM_ROOT);
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(folders));
+    return;
+  }
+
+  // Transitional Training topology:
+  // Browser -> Node frontend/auth gateway -> loopback FastAPI Training API.
+  // Keep browser URLs and NDJSON bodies unchanged. The legacy handlers below
+  // remain as reference but are bypassed for these exact approved routes.
+  if (req.method === 'POST' && url.pathname === '/api/km/upload') {
+    const session = requireWriteSession(req, res);
+    if (!session) return;
+    proxyTrainingRequest(req, res, url.pathname, session);
+    return;
+  }
+  if (req.method === 'GET' && url.pathname === '/api/km/not-trained') {
+    proxyTrainingRequest(req, res, url.pathname, getSession(req));
+    return;
+  }
+  if (req.method === 'POST' && url.pathname === '/api/km/train') {
+    const session = requireWriteSession(req, res);
+    if (!session) return;
+    proxyTrainingRequest(req, res, url.pathname, session);
     return;
   }
 
@@ -1045,6 +1170,13 @@ const server = http.createServer((req, res) => {
 
   // --- List trained KMs (for Add Summary) ---
   if (req.method === 'GET' && url.pathname === '/api/km/trained-list') {
+    try {
+      requireVaultReadable();
+    } catch (error) {
+      res.writeHead(503, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: error.message }));
+      return;
+    }
     function walkVault(dir, output) {
       let entries;
       try {
@@ -1090,6 +1222,13 @@ const server = http.createServer((req, res) => {
   // --- Generate summary files for already-trained KMs (no re-training) ---
   if (req.method === 'POST' && url.pathname === '/api/km/summarize') {
     if (!requireWriteSession(req, res)) return;
+    try {
+      requireVaultWritable();
+    } catch (error) {
+      res.writeHead(503, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: error.message }));
+      return;
+    }
     let body = '';
     req.on('data', chunk => { body += chunk.toString(); });
     req.on('end', async () => {
@@ -1186,6 +1325,13 @@ const server = http.createServer((req, res) => {
 
   // --- ASK_KM: Query trained KM knowledge ---
   if (req.method === 'POST' && url.pathname === '/api/ask_km') {
+    try {
+      requireVaultReadable();
+    } catch (error) {
+      res.writeHead(503, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: error.message }));
+      return;
+    }
     // Keep Node as the frontend-compatible entry point while allowing the
     // FastAPI implementation to be enabled without a frontend change.
     if (ASK_KM_PROVIDER === 'fastapi') {
@@ -1562,11 +1708,23 @@ const server = http.createServer((req, res) => {
 
 
 
-server.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-  console.log(`KM vault root: ${KM_ROOT}`);
-  console.log('CONFIG=', CONFIG);
-  console.log('N8N_KM_URL=', CONFIG?.N8N_KM_URL);
+try {
+  requireVaultReadable();
+} catch (error) {
+  console.error(`ERROR: ${error.message}`);
+  process.exitCode = 1;
+  return;
+}
 
+requireMatchingFastApiVault(error => {
+  if (error) {
+    console.error(`ERROR: ${error.message}`);
+    process.exitCode = 1;
+    return;
+  }
+  server.listen(PORT, () => {
+    console.log(`Server running at http://localhost:${PORT}`);
+    console.log(`KM vault root: ${KM_ROOT}`);
+  });
 });
 

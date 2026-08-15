@@ -127,6 +127,12 @@ Configuration
 
 The Vault is the permanent knowledge repository.
 
+The Vault location is configured once with `KM_VAULT_ROOT`. It may be a local
+Windows path such as `D:\KM\Vault` or an SMB UNC path such as
+`\\SERVER\KM\Vault`. The Factory-KM runtime host and Vault host may therefore
+be different machines; the Vault host does not run the Factory-KM web service.
+`D:\KM\Vault` is used only when `KM_VAULT_ROOT` is not configured.
+
 ---
 
 ## 4.3 PageIndex
@@ -404,4 +410,3 @@ Answer
 Original Slide (optional)
 
 This architecture is considered the canonical Factory-KM design.
-

@@ -10,6 +10,56 @@ It records why important decisions were made.
 
 ---
 
+# 2026-08-15
+
+## FastAPI Training Migration Parity
+
+### Decision
+
+Completed the Training migration core using the transitional runtime path:
+
+Browser
+
+â†“
+
+Node session/auth gateway
+
+â†“
+
+FastAPI Training API
+
+â†“
+
+Converters and Azure Vision
+
+â†“
+
+Detail and summary Markdown
+
+Node retains browser authentication, folder selection, and viewer write
+protection. FastAPI owns upload conversion, pending-training discovery, Vision
+training, summary generation, and final Training status.
+
+### Verification
+
+- PPTX, XLSX, and PDF passed the operator request path through Node to FastAPI.
+- PPT, PPTX, XLS, XLSX, DOC, DOCX, and PDF are covered by automated parity tests.
+- Zero-page, converter-exception, partial-output, and viewer-write failures do
+  not report successful training.
+- DOC and DOCX real smoke testing remains environment-blocked by active Word COM
+  sessions. This is a verification gap, not a code blocker.
+
+### Impact
+
+Training runtime integration only. PageIndex, Dictionary, LLM Wiki, and Ask-KM
+retrieval remain unchanged.
+
+### Status
+
+Implemented
+
+---
+
 # 2026-07-30
 
 ## Documentation
@@ -673,4 +723,3 @@ Example
 ### Status
 
 Planned / In Progress / Implemented / Deprecated
-

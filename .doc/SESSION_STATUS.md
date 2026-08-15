@@ -13,7 +13,7 @@ Unlike CHANGELOG.md, this file is updated continuously.
 
 # Last Updated
 
-2026-07-30
+2026-08-15
 
 ---
 
@@ -63,6 +63,19 @@ Focus on
 - [x] Asset image policy
 - [x] Dictionary architecture
 - [x] LLM Wiki architecture
+
+## Training Migration
+
+- [x] FastAPI Training migration core
+- [x] Node to FastAPI Training gateway parity
+- [x] Existing Node login/session behavior preserved
+- [x] PPTX, XLSX, and PDF operator-path verification
+- [x] Automated parity coverage for PPT, PPTX, XLS, XLSX, DOC, DOCX, and PDF
+
+Verification gap
+
+- DOC and DOCX real smoke testing is environment-blocked by active Word COM
+  sessions. This is not a Training implementation blocker.
 
 ---
 
@@ -191,4 +204,3 @@ Do NOT begin Dictionary implementation until PageIndex is complete.
 This file should always reflect the latest project state.
 
 Update this document at the end of every engineering session.
-

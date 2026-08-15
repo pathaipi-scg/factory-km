@@ -11,6 +11,8 @@ CLAUDE.md
 .venv/
 /config.js
 
+/KM
+
 
 # Local environment / credentials (test login)
 .env

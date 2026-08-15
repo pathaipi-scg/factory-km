@@ -2,6 +2,13 @@
 
 Last updated: 2026-08-02
 
+## Product vision
+
+The informational long-term product direction, from Knowledge Retrieval
+through a Closed Learning Loop, is described in
+[Factory AI Vision](FACTORY_AI_VISION.md). It does not change the current
+implementation status, next steps, or roadmap.
+
 ## Completed today
 
 - Microsoft SQL Server authentication persistence using the shared

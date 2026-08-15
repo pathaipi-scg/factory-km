@@ -1,8 +1,11 @@
 """Filesystem repository for trained Factory KM vault records."""
 
 import os
+from pathlib import Path
 import re
 from dataclasses import dataclass
+
+from backend.config.vault import VaultSettings, get_vault_settings
 
 
 @dataclass(frozen=True)
@@ -22,10 +25,16 @@ class KmVaultRepository:
     """Read trained KM records from the existing filesystem vault."""
 
     def __init__(self, km_root: str | None = None) -> None:
-        self._km_root = km_root or os.environ.get("KM_VAULT_ROOT", r"D:\KM\Vault")
+        self._vault_settings = (
+            VaultSettings(Path(km_root).resolve(), explicitly_configured=True)
+            if km_root is not None
+            else get_vault_settings()
+        )
+        self._km_root = str(self._vault_settings.root)
 
     def list_trained(self, folder: str | None = None) -> tuple[KmVaultRecord, ...]:
         """Return trained KM records in the current filesystem traversal order."""
+        self._vault_settings.require_readable()
         folder = folder.strip() if isinstance(folder, str) else ""
         folder = re.sub(r"^[\\/]+|[\\/]+$", "", folder)
         walk_root = self._km_root

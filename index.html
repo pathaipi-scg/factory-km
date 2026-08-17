@@ -51,6 +51,7 @@
           <div data-upload="photo" class="write-only">📷 Add photo</div>
           <div data-upload="file" class="write-only">📎 Add files</div>
           <div id="trainKmMenuItem" class="write-only">🚀 Train KM</div>
+          <div id="reviewEngineeringMenuItem" class="write-only">🔎 Review Engineering Extraction</div>
           <div id="askKmMenuItem">📚 Ask KM</div>
           <div id="addSummaryMenuItem" class="write-only">📝 Add Summary</div>
           <div>🎨 Create image</div>
@@ -107,6 +108,19 @@
       <div class="modal-actions">
         <button id="cancelAddSummary" class="modal-btn secondary">Cancel</button>
         <button id="generateSummaryBtn" class="modal-btn primary" disabled>Generate Summary</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="engineeringReviewModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content" style="max-width:1000px; max-height:90vh; overflow:auto;">
+      <h3>Engineering Document Extraction Review</h3>
+      <p class="engineering-state-note">EXTRACTED values and CANDIDATE identities are drafts. Selecting a candidate creates only a CONFIRMED DRAFT choice; OpcTagManager is not modified.</p>
+      <div id="engineeringReviewList"></div>
+      <div id="engineeringReviewDraft" class="hidden"></div>
+      <div class="modal-actions">
+        <button id="closeEngineeringReview" class="modal-btn secondary">Close</button>
       </div>
     </div>
   </div>

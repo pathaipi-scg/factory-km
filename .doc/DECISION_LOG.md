@@ -618,11 +618,113 @@ SYSTEM_ARCHITECTURE.md
 
 ---
 
+# ===========================================================================
+# ADR-0008
+# ===========================================================================
+
+Title
+
+Make Manifest Domain the immediate prerequisite within PageIndex Phase 2.
+
+Date
+
+2026-08-17
+
+Status
+
+Accepted
+
+## Context
+
+PageIndex recovery, resume, incremental synchronization, and workspace mapping
+require one durable source of document/version identity and lifecycle state.
+The roadmap and status documents previously described the same phase using
+different immediate priorities.
+
+## Decision
+
+Factory-KM remains in Phase 2 — PageIndex. Work proceeds in this order:
+
+Manifest Domain, PageIndex generation/discovery, incremental sync/state
+transitions, recovery/resume/locking, Dictionary, then LLM Wiki.
+
+Manifest persistence uses the central Factory-KM MSSQL database in a dedicated
+`manifest` schema, separate from `auth`. Factory/plant/process identities are
+record metadata rather than separate Manifest databases. Factory-KM owns the
+schema migrations. State changes use SQL transactions and SQL Server
+`rowversion` optimistic concurrency.
+
+The Vault remains authoritative for content and artifacts. PageIndex
+workspaces are derived and rebuildable. Only relative/path-independent locators
+may be stored. External ResourceId, SUP, CNT, EPT, KepwarePath, TaskId, and
+future QUO identities remain logical references without cross-database foreign
+keys.
+
+## Consequences
+
+PageIndex does not create a private competing manifest. Dictionary and LLM Wiki
+remain downstream roadmap items. Manifest uniqueness and idempotency are
+enforced in the central database while live content remains in the Vault.
+
+## Related Documents
+
+PAGEINDEX_DESIGN.md
+
+NEXT_STEPS.md
+
+PROJECT_STATUS.md
+
+---
+
+# ===========================================================================
+# ADR-0010
+# ===========================================================================
+
+Title
+
+Run engineering document extraction after successful Training and keep canonical engineering identity in OpcTagManager.
+
+Date
+
+2026-08-17
+
+Status
+
+Accepted
+
+## Context
+
+Factory-KM already produces traceable detail and summary Markdown. Quotations
+and Manuals need evidence-bearing structured understanding without duplicating
+conversion or canonical Supplier, Contact, Equipment/Part, and Resource
+registries.
+
+## Decision
+
+Extraction consumes the successfully trained detail/summary pair and produces
+a persistence-neutral human-review draft. Factory-KM calls OpcTagManager's
+read-only candidate APIs over HTTP and preserves ambiguity. OpcTagManager owns
+canonical identities and relationships. No canonical write occurs in the
+foundation slice. PageIndex, Dictionary, LLM Wiki, live Manifest migration,
+shared Auth, and KMVaultManager migration are not dependencies.
+
+## Consequences
+
+Evidence and source SHA/version information remain available for review and
+reruns. Service/freight/commercial lines are not forced into EPT identities.
+Confirmed canonical writes require a later, separately approved slice.
+
+## Related Documents
+
+ENGINEERING_DOCUMENT_EXTRACTION_DESIGN.md
+
+FactoryKM_OpcTagManager_Integration_Context_20260817.md
+
+---
+
 # Future Decisions
 
 Continue assigning IDs
-
-ADR-0008
 
 ADR-0009
 
@@ -637,4 +739,3 @@ If a decision changes
 Create a new ADR referencing the previous one.
 
 The historical record must remain intact.
-

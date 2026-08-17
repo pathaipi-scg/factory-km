@@ -10,6 +10,8 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from backend.services.training_service import TrainingError, TrainingService, UploadedFile
+from backend.services.engineering_extraction_service import EngineeringExtractionError, EngineeringExtractionService
+from backend.services.opc_tag_manager_client import OpcTagManagerClientError
 
 
 router = APIRouter()
@@ -19,6 +21,11 @@ def get_training_service(request: Request) -> TrainingService:
     """Return an app-injected service in tests or the production service."""
     configured = getattr(request.app.state, "training_service", None)
     return configured if isinstance(configured, TrainingService) else TrainingService()
+
+
+def get_extraction_service(request: Request) -> EngineeringExtractionService:
+    configured = getattr(request.app.state, "engineering_extraction_service", None)
+    return configured if isinstance(configured, EngineeringExtractionService) else EngineeringExtractionService()
 
 
 async def get_training_gateway_role(request: Request) -> str:
@@ -159,6 +166,39 @@ def not_trained(request: Request) -> JSONResponse:
         return JSONResponse(content=get_training_service(request).list_not_trained())
     except TrainingError as error:
         return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
+
+
+@router.get("/km/trained")
+def trained_for_extraction(request: Request) -> JSONResponse:
+    try: return JSONResponse(content=get_training_service(request).list_trained())
+    except TrainingError as error: return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
+
+
+@router.post("/km/extraction-draft", response_model=None)
+async def create_extraction_draft(request: Request, gateway_role: str = Depends(get_training_gateway_role)) -> JSONResponse:
+    denied = _write_allowed(gateway_role)
+    if denied: return denied
+    try:
+        payload = await request.json(); km_id = payload.get("kmId") if isinstance(payload, dict) else None
+        if not isinstance(km_id, str) or not km_id: raise TrainingError("Missing kmId")
+        source = get_training_service(request).read_trained_input(km_id)
+        draft = get_extraction_service(request).extract(source)
+        return JSONResponse(content={"success": True, "draft": draft.to_dict()})
+    except (TrainingError, EngineeringExtractionError) as error:
+        return JSONResponse(status_code=400, content={"success": False, "error": str(error)})
+
+
+@router.post("/km/extraction-contact-candidates", response_model=None)
+async def extraction_contact_candidates(request: Request, _gateway_role: str = Depends(get_training_gateway_role)) -> JSONResponse:
+    try:
+        payload = await request.json()
+        supplier_id = payload.get("supplierResourceId") if isinstance(payload, dict) else None
+        fields = payload.get("fields") if isinstance(payload, dict) else None
+        if not isinstance(supplier_id, str) or not isinstance(fields, dict): raise TrainingError("Invalid Contact candidate request")
+        candidates = get_extraction_service(request).contact_candidates(supplier_id, fields)
+        return JSONResponse(content={"success": True, "candidates": candidates, "autoSelectedContactId": None})
+    except (TrainingError, OpcTagManagerClientError) as error:
+        return JSONResponse(status_code=400, content={"success": False, "error": str(error)})
 
 
 @router.post("/km/train", response_model=None)

@@ -672,6 +672,20 @@ const server = http.createServer((req, res) => {
     proxyTrainingRequest(req, res, url.pathname, session);
     return;
   }
+  if (req.method === 'GET' && url.pathname === '/api/km/trained') {
+    proxyTrainingRequest(req, res, url.pathname, getSession(req));
+    return;
+  }
+  if (req.method === 'POST' && url.pathname === '/api/km/extraction-draft') {
+    const session = requireWriteSession(req, res);
+    if (!session) return;
+    proxyTrainingRequest(req, res, url.pathname, session);
+    return;
+  }
+  if (req.method === 'POST' && url.pathname === '/api/km/extraction-contact-candidates') {
+    proxyTrainingRequest(req, res, url.pathname, getSession(req));
+    return;
+  }
 
   if (req.method === 'POST' && url.pathname === '/api/km/upload') {
     if (!requireWriteSession(req, res)) return;

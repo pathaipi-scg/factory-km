@@ -474,6 +474,45 @@ workspace data falls back to Folder Search. Index generation, document
 mapping, synchronization, manifests, recovery, and workspace mutation remain
 out of scope.
 
+This paragraph describes the implemented local read-only retrieval slice, not
+the completion criteria for the overall Phase 2 product phase.
+
+## Phase 2 Implementation Ordering
+
+The product phase remains PageIndex. Its immediate prerequisite is a Manifest
+Domain that supplies durable logical document/version identity and lifecycle
+state.
+
+Required sequence: Manifest Domain, PageIndex generation/discovery,
+incremental sync/state transitions, recovery/resume/locking, Dictionary, then
+LLM Wiki.
+
+PageIndex generation must not invent a private second manifest. Manifest
+persistence uses the central Factory-KM MSSQL database under the dedicated
+`manifest` schema. The Vault remains authoritative content storage and the
+workspace remains derived/rebuildable state. Absolute Windows paths are not
+document identity.
+
+## Manifest-Driven Discovery Slice
+
+The discovery service is a workspace-independent planning layer. It reads only
+active trained Markdown from the Manifest and classifies work as new/changed,
+failed retry, pending resume, or missing workspace mapping.
+
+Preparing work changes new, failed, and missing-mapping records to `pending`
+through the Manifest repository and its rowversion concurrency check. Existing
+pending records are resumed without incrementing their attempt count again.
+Retired, untrained, original-source, and already mapped indexed records are not
+scheduled.
+
+An `indexed` record with no workspace mapping is deliberately representable as
+recoverable inconsistent state. Discovery schedules it instead of rejecting or
+silently treating it as complete.
+
+This slice does not read Vault content, generate PageIndex files, call Azure,
+or require a live MSSQL connection. Workspace generation remains the next
+separate slice.
+
 ---
 
 # 20. AI Agent Rules

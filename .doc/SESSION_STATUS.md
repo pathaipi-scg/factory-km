@@ -13,7 +13,7 @@ Unlike CHANGELOG.md, this file is updated continuously.
 
 # Last Updated
 
-2026-08-15
+2026-08-17
 
 ---
 
@@ -27,13 +27,12 @@ PageIndex
 
 # Current Objective
 
-Complete the PageIndex subsystem.
+Implement the Engineering Document Extraction Foundation after the completed
+Training Markdown hook. PageIndex workspace generation, Dictionary, and LLM
+Wiki are paused while this cross-project integration slice is reviewed.
 
-Focus on
-
-- Recovery
-- Resume
-- Incremental Sync
+Focus on evidence-bearing Quotation/Manual drafts, read-only OpcTagManager
+candidate lookup, and draft-only human confirmation without canonical writes.
 
 ---
 
@@ -51,6 +50,10 @@ Focus on
 - [x] ROADMAP.md
 - [x] CHANGELOG.md
 - [x] DECISION_LOG.md
+- [x] MANIFEST_DESIGN.md
+- [x] Manifest Domain models and discovery contract
+- [x] Central MSSQL `manifest` migrations and repository foundation
+- [x] Manifest-driven PageIndex discovery/planning service
 
 ---
 
@@ -81,11 +84,14 @@ Verification gap
 
 # Current Work
 
-PageIndex
+PageIndex prerequisite: Manifest Domain
 
-- [ ] Recovery
-- [ ] Resume
-- [ ] Incremental Sync
+- [x] Approve central MSSQL `manifest` persistence
+- [x] Implement Manifest identity and lifecycle domain
+- [x] Implement PageIndex discovery/planning
+- [ ] Implement PageIndex workspace generation
+- [ ] Implement incremental sync and state transitions
+- [ ] Implement recovery, resume, and locking
 
 ---
 
@@ -183,19 +189,16 @@ main
 
 # Next Session
 
-Continue
-
-PageIndex Recovery
-
-↓
-
-Resume
-
-↓
-
-Incremental Sync
+Review the Engineering Document Extraction Foundation. The next persistence
+and confirmed-canonical-write slice requires separate approval.
 
 Do NOT begin Dictionary implementation until PageIndex is complete.
+
+Manifest persistence uses the central Factory-KM MSSQL database and dedicated
+`manifest` schema; do not substitute SQLite, filesystem JSON, or plant-specific
+databases.
+
+Do NOT select or implement Manifest persistence until its backend is approved.
 
 ---
 

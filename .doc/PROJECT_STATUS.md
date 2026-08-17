@@ -39,6 +39,15 @@ implementation status, next steps, or roadmap.
 
 ## Current architecture status
 
+- Engineering Document Extraction Foundation hooks after successful Training
+  detail and summary Markdown. It defines evidence-bearing classification,
+  Quotation and Manual review drafts, a GET-only OpcTagManager client, and a
+  draft-only review UI.
+- Factory-KM owns extraction and review. OpcTagManager owns canonical `SUP_`,
+  `CNT_`, `EPT_`, Resource, KepwarePath, and engineering relationships.
+- PageIndex workspace generation, Dictionary, and LLM Wiki are paused during
+  the current integration focus; their roadmap items remain intact.
+
 - The architecture foundation milestone is complete.
 - Authentication models, services, MSSQL repositories, session handling,
   Argon2id password hashing, bootstrap, and disabled compatibility endpoints
@@ -56,17 +65,25 @@ implementation status, next steps, or roadmap.
   are not implemented.
 - SQLite authentication code remains inactive compatibility and regression-test
   infrastructure; active FastAPI auth composition uses MSSQL.
+- The product remains in Phase 2 — PageIndex. Its immediate implementation
+  prerequisite is the Manifest Domain. The approved sequence is Manifest
+  Domain, PageIndex generation/discovery, incremental sync/state transitions,
+  recovery/resume/locking, Dictionary, then LLM Wiki.
+- Durable Manifest persistence is approved in the central Factory-KM MSSQL
+  database under a dedicated `manifest` schema, with SQL transactions and
+  rowversion optimistic concurrency. It is separate from authentication.
 
 ## Outstanding work
 
-1. Define the Manifest Domain.
-2. Define the Audit Domain and later select audit persistence.
-3. Implement the authorized Vault API and concrete filesystem behavior.
-4. Build Vault Web Management after the API and authorization boundaries are
+1. Implement the Manifest identity, version, lifecycle, MSSQL persistence, and
+   PageIndex discovery contract.
+2. Implement PageIndex generation/discovery, incremental sync/state
+   transitions, and then recovery/resume/locking.
+3. Define the Audit Domain and later select audit persistence.
+4. Implement the authorized Vault API and concrete filesystem behavior.
+5. Build Vault Web Management after the API and authorization boundaries are
    stable.
-5. Implement PageIndex workspace generation, identity mapping,
-   synchronization, recovery, and operational monitoring.
-6. Implement Dictionary domain and runtime behavior.
+6. Implement Dictionary domain and runtime behavior after PageIndex.
 7. Implement LLM Wiki only after its upstream document and indexing contracts
    are stable.
 8. Add Factory Context loading, selection, persistence, and runtime composition

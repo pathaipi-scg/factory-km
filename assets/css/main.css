@@ -206,6 +206,11 @@ textarea::placeholder{color:var(--txt-dim)}
    must scroll. flex:1 1 auto + min-height:0 lets it shrink within the modal
    (instead of overflowing the clipped container) and show a scrollbar. */
 #trainKmListArea,#addSummaryListArea{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden}
+.engineering-state-note{padding:10px;border:1px solid var(--line);border-radius:8px;color:var(--txt-dim)}
+.engineering-review-section{margin:14px 0;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--bg-1)}
+.engineering-review-section h4{margin:0 0 8px}.engineering-review-row{padding:6px 0;border-bottom:1px solid var(--line)}
+.engineering-review-row:last-child{border-bottom:0}.engineering-evidence{font-size:12px;color:var(--txt-dim);display:block}
+.engineering-candidate{display:flex;gap:8px;align-items:flex-start;padding:6px}.engineering-badge{font-size:11px;font-weight:700;color:var(--accent)}
 
 /* === Status toasts === */
 .toast-wrap{position:fixed;top:18px;right:18px;z-index:2000;display:flex;flex-direction:column;gap:12px;max-width:380px}

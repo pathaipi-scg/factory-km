@@ -913,6 +913,65 @@ trainSelectedBtn.onclick = async () => {
   }
 };
 
+// ============ Engineering Extraction Review (draft-only) ============
+const engineeringReviewModal = document.getElementById("engineeringReviewModal");
+const engineeringReviewList = document.getElementById("engineeringReviewList");
+const engineeringReviewDraft = document.getElementById("engineeringReviewDraft");
+document.getElementById("reviewEngineeringMenuItem").onclick = openEngineeringReview;
+document.getElementById("closeEngineeringReview").onclick = () => engineeringReviewModal.classList.add("hidden");
+
+async function openEngineeringReview(){
+  engineeringReviewModal.classList.remove("hidden"); engineeringReviewDraft.classList.add("hidden");
+  engineeringReviewList.replaceChildren();
+  const loading=document.createElement("p"); loading.textContent="Loading trained documents..."; engineeringReviewList.append(loading);
+  try{
+    const response=await fetch("/api/km/trained"); const documents=await response.json(); engineeringReviewList.replaceChildren();
+    if(!Array.isArray(documents)||!documents.length){ const empty=document.createElement("p"); empty.textContent="No successfully trained documents are available."; engineeringReviewList.append(empty); return; }
+    documents.forEach(documentInfo=>{ const row=document.createElement("div"); row.className="engineering-review-row";
+      const text=document.createElement("span"); text.textContent=`${documentInfo.sourceFile} (${documentInfo.kmId})`;
+      const button=document.createElement("button"); button.type="button"; button.textContent="Extract / Review Draft"; button.onclick=()=>loadEngineeringDraft(documentInfo.kmId); row.append(text,button); engineeringReviewList.append(row); });
+  }catch(_error){ loading.textContent="Unable to load trained documents."; }
+}
+
+async function loadEngineeringDraft(kmId){
+  engineeringReviewDraft.classList.remove("hidden"); engineeringReviewDraft.replaceChildren();
+  const loading=document.createElement("p"); loading.textContent="Creating draft extraction..."; engineeringReviewDraft.append(loading);
+  try{
+    const response=await fetch("/api/km/extraction-draft",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({kmId})}); const data=await response.json();
+    if(!data.success) throw new Error(data.error||"Extraction failed"); renderEngineeringDraft(data.draft);
+  }catch(error){ loading.textContent=`Extraction failed safely: ${error.message}`; }
+}
+
+function engineeringSection(parent,title){ const section=document.createElement("section"); section.className="engineering-review-section"; const heading=document.createElement("h4"); heading.textContent=title; section.append(heading); parent.append(section); return section; }
+function renderExtractedFields(parent,fields){ Object.entries(fields||{}).forEach(([name,item])=>{ const row=document.createElement("div"); row.className="engineering-review-row";
+  const label=document.createElement("strong"); label.textContent=`EXTRACTED ${name.replaceAll("_"," ")}: `; const value=document.createElement("span"); value.textContent=String(item.value??"");
+  const confidence=document.createElement("span"); confidence.className="engineering-badge"; confidence.textContent=` confidence ${Math.round((item.confidence||0)*100)}%`; row.append(label,value,confidence);
+  (item.evidence||[]).forEach(evidence=>{ const note=document.createElement("span"); note.className="engineering-evidence"; note.textContent=`Evidence: ${evidence.artifact} · ${evidence.location}${evidence.excerpt?` · ${evidence.excerpt}`:""}`; row.append(note); }); parent.append(row); }); }
+function renderCandidates(parent,candidates,onSelect){ const heading=document.createElement("strong"); heading.textContent="CANDIDATES"; parent.append(heading);
+  if(!candidates?.length){ const empty=document.createElement("p"); empty.textContent="No canonical candidate returned; no identity was selected."; parent.append(empty); return; }
+  const group=`candidate-${crypto.randomUUID()}`; candidates.forEach(candidate=>{ const row=document.createElement("label"); row.className="engineering-candidate"; const radio=document.createElement("input"); radio.type="radio"; radio.name=group;
+    const text=document.createElement("span"); text.textContent=`${candidate.canonical_id} · ${candidate.metadata.display_name||candidate.metadata.supplier_name||candidate.metadata.contact_name||""} · ${(candidate.match_evidence||[]).map(e=>e.signal).join(", ")}`;
+    radio.onchange=()=>{ text.dataset.state="confirmed-draft"; text.textContent=`CONFIRMED DRAFT: ${candidate.canonical_id} · ${candidate.metadata.display_name||candidate.metadata.supplier_name||candidate.metadata.contact_name||""}`; if(onSelect)onSelect(candidate.canonical_id); }; row.append(radio,text); parent.append(row); });
+  const future=document.createElement("button"); future.type="button"; future.disabled=true; future.textContent="Create New Canonical Identity (future)"; parent.append(future); }
+
+function renderEngineeringDraft(draft){ engineeringReviewDraft.replaceChildren();
+  const source=engineeringSection(engineeringReviewDraft,"Source and Classification"); const sourceText=document.createElement("p"); sourceText.textContent=`${draft.source_file} · ${draft.source_document_id} · SHA-256 ${draft.source_content_sha256} · ${draft.extractor_version} / ${draft.schema_version}`; source.append(sourceText);
+  const classification=document.createElement("p"); classification.textContent=`EXTRACTED ${draft.classification.document_type} · confidence ${Math.round(draft.classification.confidence*100)}% · ${draft.classification.reason}`; source.append(classification);
+  (draft.classification.evidence||[]).forEach(e=>{const note=document.createElement("span");note.className="engineering-evidence";note.textContent=`Evidence: ${e.artifact} · ${e.location} · ${e.excerpt||""}`;source.append(note);});
+  if(draft.quotation){ const quote=engineeringSection(engineeringReviewDraft,"Quotation"); renderExtractedFields(quote,draft.quotation.fields);
+    if(draft.quotation.issuer_supplier){ const supplier=engineeringSection(engineeringReviewDraft,"Issuer / Supplier (not Customer)"); renderExtractedFields(supplier,draft.quotation.issuer_supplier.fields); renderCandidates(supplier,draft.quotation.issuer_supplier.candidates,(supplierId)=>loadDraftContactCandidates(draft.quotation.supplier_contacts,supplierId)); }
+    const buyer=engineeringSection(engineeringReviewDraft,"Customer / Buyer"); renderExtractedFields(buyer,draft.quotation.customer_buyer);
+    const contacts=engineeringSection(engineeringReviewDraft,"Supplier Contact Drafts"); contacts.id="engineeringContactDrafts"; draft.quotation.supplier_contacts.forEach(contact=>{ const item=engineeringSection(contacts,contact.draft_id); renderExtractedFields(item,contact.fields); });
+    const lines=engineeringSection(engineeringReviewDraft,"Quotation Lines"); draft.quotation.lines.forEach(line=>{const item=engineeringSection(lines,`${line.draft_id} · ${line.line_type}`);renderExtractedFields(item,line.fields);if(line.equipment_part)renderCandidates(item,line.equipment_part.candidates);}); }
+  if(draft.manual){ const manual=engineeringSection(engineeringReviewDraft,"Manual"); renderExtractedFields(manual,draft.manual.fields); if(draft.manual.equipment_part)renderCandidates(manual,draft.manual.equipment_part.candidates); }
+  (draft.integration_errors||[]).forEach(error=>{const warning=document.createElement("p");warning.textContent=`Canonical lookup unavailable: ${error}`;engineeringReviewDraft.append(warning);});
+}
+
+async function loadDraftContactCandidates(contacts,supplierResourceId){
+  for(const contact of contacts||[]){ try{ const response=await fetch("/api/km/extraction-contact-candidates",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({supplierResourceId,fields:contact.fields})}); const data=await response.json(); if(data.success)contact.candidates=(data.candidates||[]).map(item=>({canonical_id:item.contact_id,metadata:item,match_evidence:item.match_evidence||[]})); }catch(_error){ /* Provisional Supplier choice remains usable. */ } }
+  const area=document.getElementById("engineeringContactDrafts"); if(area){ area.replaceChildren(); const heading=document.createElement("h4"); heading.textContent="Supplier Contact Drafts"; area.append(heading); contacts.forEach(contact=>{const item=engineeringSection(area,contact.draft_id);renderExtractedFields(item,contact.fields);renderCandidates(item,contact.candidates);}); }
+}
+
 
 // ============ Add Summary Modal ============
 const addSummaryModal = document.getElementById("addSummaryModal");

@@ -15,9 +15,12 @@ PageIndex
 
 🟡 In Progress
 
-- Resume
-- Recovery
-- Incremental Sync
+- Immediate prerequisite: Manifest Domain
+- PageIndex generation / discovery
+- Incremental Sync / state transitions
+- Recovery / Resume / Locking
+
+Manifest persistence: approved central Factory-KM MSSQL `manifest` schema.
 
 --------------------------------
 

@@ -211,6 +211,20 @@ class TrainingServiceTests(unittest.TestCase):
         self.assertTrue(summary.exists())
         self.assertIn("Engineering summary", summary.read_text(encoding="utf-8"))
 
+    def test_completed_markdown_is_the_extraction_hook_with_source_sha(self) -> None:
+        service = self.service()
+        record = service.upload([UploadedFile("quotation.pdf", b"quotation-source")], "Purchasing/Quotes")[0]
+        with self.assertRaisesRegex(TrainingError, "not successfully trained"):
+            service.read_trained_input(record.km_id)
+        service.train_one(record.km_id)
+        source = service.read_trained_input(record.km_id)
+        self.assertEqual(source.source_document_id, record.km_id)
+        self.assertEqual(source.source_file, "quotation.pdf")
+        self.assertEqual(len(source.source_content_sha256), 64)
+        self.assertIn("Training_Status : Trained", source.detail_markdown)
+        self.assertIn("Engineering summary", source.summary_markdown)
+        self.assertEqual(service.list_trained()[0]["kmId"], record.km_id)
+
     def test_training_without_assets_is_not_success(self) -> None:
         service = self.service()
         record = service.upload(

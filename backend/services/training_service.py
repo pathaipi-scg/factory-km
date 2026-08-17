@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import datetime
 import json
+import hashlib
 import os
 from pathlib import Path
 import re
@@ -52,6 +53,16 @@ class CreatedKm:
     source_path: Path
     asset_path: Path
     markdown_path: Path
+
+
+@dataclass(frozen=True)
+class TrainedKmInput:
+    """Completed Training output consumed by downstream extraction."""
+    source_document_id: str
+    source_file: str
+    source_content_sha256: str
+    detail_markdown: str
+    summary_markdown: str
 
 
 def _timestamp(value: datetime | None = None) -> str:
@@ -356,6 +367,21 @@ class TrainingService:
             })
         return output
 
+    def list_trained(self) -> list[dict[str, object]]:
+        """List completed detail Markdown packages available for extraction."""
+        try: self.vault_settings.require_readable()
+        except VaultConfigurationError as error: raise TrainingError(str(error)) from error
+        output: list[dict[str, object]] = []
+        for path in self.vault_root.rglob("KM_????????_??????.md") if self.vault_root.is_dir() else []:
+            if any(KM_NAME.fullmatch(parent.name) for parent in path.parents): continue
+            try: markdown = path.read_text(encoding="utf-8")
+            except OSError: continue
+            if _metadata_value(markdown, "Training_Status") != "Trained" or not path.with_name(f"{path.stem}_summary.md").is_file(): continue
+            output.append({"kmId": _metadata_value(markdown, "KM_ID") or path.stem,
+                           "sourceFile": _metadata_value(markdown, "Source_File"),
+                           "category": _metadata_value(markdown, "Category"), "machine": _metadata_value(markdown, "Machine")})
+        return sorted(output, key=lambda item: str(item["kmId"]), reverse=True)
+
     def train_one(self, km_id: str, progress: Callable[[str], None] | None = None) -> dict[str, object]:
         try:
             self.vault_settings.require_writable()
@@ -426,6 +452,20 @@ class TrainingService:
         path = self._find_markdown(km_id)
         markdown = path.read_text(encoding="utf-8")
         return len(_slides(path.parent / _metadata_value(markdown, "Asset_Folder")))
+
+    def read_trained_input(self, km_id: str) -> TrainedKmInput:
+        """Read the completed detail/summary pair at the post-Training hook."""
+        path = self._find_markdown(km_id)
+        detail = path.read_text(encoding="utf-8")
+        if _metadata_value(detail, "Training_Status") != "Trained":
+            raise TrainingError(f"{km_id}: KM is not successfully trained")
+        summary_path = path.with_name(f"{path.stem}_summary.md")
+        if not summary_path.is_file(): raise TrainingError(f"{km_id}: summary Markdown not found")
+        source_file = _metadata_value(detail, "Source_File")
+        source_path = path.parent / source_file
+        if not source_path.is_file(): raise TrainingError(f"{km_id}: source document not found")
+        return TrainedKmInput(km_id, source_file, hashlib.sha256(source_path.read_bytes()).hexdigest(),
+                              detail, summary_path.read_text(encoding="utf-8"))
 
     def _find_markdown(self, km_id: str) -> Path:
         if not KM_NAME.fullmatch(km_id):

@@ -9,12 +9,15 @@ from types import SimpleNamespace
 from fastapi import HTTPException
 
 from backend.routers.upload import (
+    create_extraction_draft,
     get_training_gateway_role,
     not_trained,
     train_km,
     upload_km,
 )
+from backend.services.engineering_extraction_service import EngineeringExtractionService
 from backend.services.training_service import TrainingService
+from tests.test_engineering_extraction import FakeOpcClient, FakeProvider, quotation_payload
 
 
 class FakeVisionClient:
@@ -43,9 +46,9 @@ def slow_converter(script: Path, source: Path, assets: Path) -> dict[str, object
 class FakeRequest:
     def __init__(
         self, service: TrainingService, *, body: bytes = b"", content_type: str = "",
-        payload=None, client_host: str = "127.0.0.1", gateway_role: str = "factory",
+        payload=None, client_host: str = "127.0.0.1", gateway_role: str = "factory", extraction_service=None,
     ):
-        self.app = SimpleNamespace(state=SimpleNamespace(training_service=service))
+        self.app = SimpleNamespace(state=SimpleNamespace(training_service=service, engineering_extraction_service=extraction_service))
         self.client = SimpleNamespace(host=client_host)
         self.headers = {
             "content-type": content_type,
@@ -112,6 +115,16 @@ class TrainingEndpointTests(unittest.TestCase):
         self.assertEqual(len(pending), 1)
         self.assertEqual(pending[0]["kmId"], final["kms"][0]["kmId"])
         self.assertEqual(pending[0]["slideCount"], 1)
+
+    def test_post_training_extraction_endpoint_returns_draft_only(self) -> None:
+        final = self.upload("quotation.pdf"); km_id = final["kms"][0]["kmId"]
+        train = asyncio.run(train_km(FakeRequest(self.service, payload={"kmIds": [km_id]}), self.role))  # type: ignore[arg-type]
+        self.assertTrue(asyncio.run(response_records(train))[-1]["success"])
+        extraction = EngineeringExtractionService(FakeProvider(quotation_payload()), FakeOpcClient())
+        response = asyncio.run(create_extraction_draft(FakeRequest(self.service, payload={"kmId": km_id}, extraction_service=extraction), self.role))  # type: ignore[arg-type]
+        body = json.loads(response.body)
+        self.assertTrue(body["success"]); self.assertEqual(body["draft"]["state"], "extracted")
+        self.assertIsNone(body["draft"]["quotation"]["issuer_supplier"]["provisional_candidate_id"])
 
     def test_train_reports_one_of_one_only_on_success(self) -> None:
         uploaded = self.upload()

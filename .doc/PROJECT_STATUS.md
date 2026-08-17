@@ -47,6 +47,10 @@ implementation status, next steps, or roadmap.
   `CNT_`, `EPT_`, Resource, KepwarePath, and engineering relationships.
 - PageIndex workspace generation, Dictionary, and LLM Wiki are paused during
   the current integration focus; their roadmap items remain intact.
+- Engineering review persistence is defined in the central Factory-KM MSSQL
+  `engineering` schema with immutable extraction snapshots, rowversion review
+  concurrency, decision history, and idempotent READY command intents. Live
+  schema migration and OpcTagManager command execution are not implemented.
 
 - The architecture foundation milestone is complete.
 - Authentication models, services, MSSQL repositories, session handling,

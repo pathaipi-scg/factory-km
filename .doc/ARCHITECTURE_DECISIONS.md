@@ -53,3 +53,10 @@ after successful Training Markdown generation. OpcTagManager remains the
 canonical engineering identity and relationship owner. The foundation uses
 only logical read-only HTTP candidate contracts; filesystem coupling and
 canonical mutation are prohibited.
+
+ADR-011
+Engineering extraction runs, immutable snapshots, review decisions, audit-ready
+history, and confirmed operation commands use the central Factory-KM MSSQL
+database in the dedicated `engineering` schema. Mutable reviews use rowversion.
+Confirmation produces idempotent READY commands only; live OpcTagManager
+execution is a separately approved future concern.

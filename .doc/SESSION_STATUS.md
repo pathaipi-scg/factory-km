@@ -34,6 +34,12 @@ Wiki are paused while this cross-project integration slice is reviewed.
 Focus on evidence-bearing Quotation/Manual drafts, read-only OpcTagManager
 candidate lookup, and draft-only human confirmation without canonical writes.
 
+Engineering Review Persistence and Confirmed Operation Command Foundation now
+adds intended central MSSQL `engineering.*` migrations, immutable `EXR_`
+snapshots, rowversion-protected `REV_` workflow state, and deterministic `CMD_`
+commands that stop at READY. No migration was applied and no command executor
+exists.
+
 ---
 
 # Completed

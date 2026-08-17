@@ -25,6 +25,11 @@ removed or replaced. This slice starts after successful Training Markdown and
 adds evidence-bearing Quotation/Manual drafts, read-only OpcTagManager lookup,
 and human review without canonical writes.
 
+The current checkpoint prepares persistent reviews and READY-only commands.
+The next separately approved slice must resolve canonical revision checks,
+service authorization, canonical Resource creation for pending MAN_/QUO_/DWG_/DOC_
+identity, and controlled command execution with retry/audit behavior.
+
 ## Prioritized roadmap
 
 ### Priority 1 — Manifest Domain

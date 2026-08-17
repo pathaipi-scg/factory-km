@@ -71,3 +71,30 @@ not implemented. No selection invokes an OpcTagManager write API.
 `source_document_id + source_content_sha256 + extractor_version +
 schema_version` distinguishes a repeat extraction from a new source revision.
 This slice does not introduce production orchestration or persistence.
+
+## Engineering review persistence
+
+The authoritative workflow store is the central Factory-KM MSSQL database in
+the dedicated `engineering` schema. It is separate from `auth` and `manifest`.
+Factory-KM owns idempotent schema migrations, but migrations are not applied
+live during foundation development.
+
+`engineering.ExtractionRuns` identifies an immutable extraction snapshot by
+logical source identity, source SHA-256, extractor version, and schema version.
+`EXR_` identity and a unique idempotency key distinguish reruns from source or
+extractor revisions. The snapshot preserves extraction evidence and the exact
+candidate response seen at review time.
+
+`engineering.Reviews` owns mutable review state and decisions under SQL Server
+rowversion optimistic concurrency. `REV_` reviews transition through draft,
+in_review, confirmed, or cancelled. Raw extraction is never rewritten.
+
+`engineering.Commands` stores deterministic `CMD_` confirmed-operation intents
+with unique idempotency keys. Confirmation creates READY commands only. No
+executor or canonical OpcTagManager mutation endpoint exists in this phase.
+
+OpcTagManager candidates do not currently guarantee a dedicated canonical
+version/rowversion field. Factory-KM preserves any version metadata returned,
+but future controlled execution requires an authoritative canonical revision
+contract. A read-only Kepware Tag search API is also not currently available;
+KepwarePath can only be entered explicitly for future intent preparation.

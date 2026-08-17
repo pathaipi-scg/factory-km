@@ -13,6 +13,7 @@ from backend.routers.chat import router as chat_router
 from backend.routers.pageindex import router as pageindex_router
 from backend.routers.upload import router as upload_router
 from backend.routers.wiki import router as wiki_router
+from backend.routers.engineering import router as engineering_router
 from backend.config.vault import VaultConfigurationError, get_vault_settings
 
 
@@ -38,6 +39,7 @@ app.include_router(upload_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
 app.include_router(wiki_router, prefix="/api")
 app.include_router(pageindex_router, prefix="/api")
+app.include_router(engineering_router, prefix="/api")
 
 
 @app.get("/", include_in_schema=False)

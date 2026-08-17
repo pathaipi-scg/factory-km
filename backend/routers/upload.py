@@ -183,7 +183,14 @@ async def create_extraction_draft(request: Request, gateway_role: str = Depends(
         if not isinstance(km_id, str) or not km_id: raise TrainingError("Missing kmId")
         source = get_training_service(request).read_trained_input(km_id)
         draft = get_extraction_service(request).extract(source)
-        return JSONResponse(content={"success": True, "draft": draft.to_dict()})
+        from backend.routers.engineering import get_engineering_review_service
+        snapshot=draft.to_dict()
+        run=get_engineering_review_service(request).persist_extraction(snapshot,
+            source_document_id=draft.source_document_id,source_sha256=draft.source_content_sha256,
+            extractor_version=draft.extractor_version,schema_version=draft.schema_version,
+            stable_document_id=payload.get("stable_document_id"),document_version_id=payload.get("document_version_id"),
+            source_resource_id=payload.get("source_resource_id"),source_resource_version=payload.get("source_resource_version"))
+        return JSONResponse(content={"success": True, "draft": snapshot,"extraction_run_id":run.extraction_run_id,"idempotency_key":run.idempotency_key})
     except (TrainingError, EngineeringExtractionError) as error:
         return JSONResponse(status_code=400, content={"success": False, "error": str(error)})
 

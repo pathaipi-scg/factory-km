@@ -724,6 +724,22 @@ FactoryKM_OpcTagManager_Integration_Context_20260817.md
 
 # Future Decisions
 
+## ADR-0011 - Central engineering review persistence and READY-only commands
+
+Date: 2026-08-17
+
+Status: Accepted
+
+Factory-KM persists immutable extraction snapshots, mutable rowversion-protected
+reviews, reviewer decisions, audit-compatible review events, and idempotent
+confirmed-operation intents in the central MSSQL `engineering` schema. This is
+separate from `auth` and `manifest`. Commands stop at READY; there is no command
+worker or OpcTagManager mutation API in this phase. Candidate version metadata
+is preserved when supplied, but OpcTagManager does not yet guarantee a canonical
+revision token. Read-only Kepware Tag search is also an integration gap.
+
+# Future Decisions
+
 Continue assigning IDs
 
 ADR-0009

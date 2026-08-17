@@ -44,6 +44,15 @@ from .engineering_extraction import (
     ExtractedValue,
     SourceEvidence,
 )
+from .engineering_review import (
+    CommandStatus,
+    ConfirmedCommand,
+    EngineeringReview,
+    EngineeringReviewConcurrencyError,
+    ExtractionRun,
+    ReviewerDecision,
+    ReviewStatus,
+)
 
 __all__ = [
     "ActorKind",
@@ -56,9 +65,14 @@ __all__ = [
     "DocumentVersionId",
     "DocumentType",
     "CommercialLineType",
+    "CommandStatus",
+    "ConfirmedCommand",
     "EngineeringDocumentType",
     "EngineeringExtractionDraft",
+    "EngineeringReview",
+    "EngineeringReviewConcurrencyError",
     "ExtractedValue",
+    "ExtractionRun",
     "Department",
     "DepartmentId",
     "FolderId",
@@ -77,6 +91,8 @@ __all__ = [
     "Process",
     "ProcessId",
     "ReferenceLifecycle",
+    "ReviewerDecision",
+    "ReviewStatus",
     "StableDocumentId",
     "SourceEvidence",
     "TrainingState",

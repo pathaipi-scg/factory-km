@@ -686,6 +686,12 @@ const server = http.createServer((req, res) => {
     proxyTrainingRequest(req, res, url.pathname, getSession(req));
     return;
   }
+  if (url.pathname.startsWith('/api/engineering/')) {
+    const session = getSession(req);
+    if (req.method !== 'GET' && !requireWriteSession(req, res)) return;
+    proxyTrainingRequest(req, res, url.pathname + url.search, session);
+    return;
+  }
 
   if (req.method === 'POST' && url.pathname === '/api/km/upload') {
     if (!requireWriteSession(req, res)) return;

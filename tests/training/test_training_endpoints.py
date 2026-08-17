@@ -16,6 +16,8 @@ from backend.routers.upload import (
     upload_km,
 )
 from backend.services.engineering_extraction_service import EngineeringExtractionService
+from backend.services.engineering_review_service import EngineeringReviewService
+from backend.repositories.engineering_review_memory import InMemoryEngineeringReviewRepository
 from backend.services.training_service import TrainingService
 from tests.test_engineering_extraction import FakeOpcClient, FakeProvider, quotation_payload
 
@@ -46,9 +48,9 @@ def slow_converter(script: Path, source: Path, assets: Path) -> dict[str, object
 class FakeRequest:
     def __init__(
         self, service: TrainingService, *, body: bytes = b"", content_type: str = "",
-        payload=None, client_host: str = "127.0.0.1", gateway_role: str = "factory", extraction_service=None,
+        payload=None, client_host: str = "127.0.0.1", gateway_role: str = "factory", extraction_service=None, review_service=None,
     ):
-        self.app = SimpleNamespace(state=SimpleNamespace(training_service=service, engineering_extraction_service=extraction_service))
+        self.app = SimpleNamespace(state=SimpleNamespace(training_service=service, engineering_extraction_service=extraction_service, engineering_review_service=review_service))
         self.client = SimpleNamespace(host=client_host)
         self.headers = {
             "content-type": content_type,
@@ -121,9 +123,11 @@ class TrainingEndpointTests(unittest.TestCase):
         train = asyncio.run(train_km(FakeRequest(self.service, payload={"kmIds": [km_id]}), self.role))  # type: ignore[arg-type]
         self.assertTrue(asyncio.run(response_records(train))[-1]["success"])
         extraction = EngineeringExtractionService(FakeProvider(quotation_payload()), FakeOpcClient())
-        response = asyncio.run(create_extraction_draft(FakeRequest(self.service, payload={"kmId": km_id}, extraction_service=extraction), self.role))  # type: ignore[arg-type]
+        reviews = EngineeringReviewService(InMemoryEngineeringReviewRepository())
+        response = asyncio.run(create_extraction_draft(FakeRequest(self.service, payload={"kmId": km_id}, extraction_service=extraction, review_service=reviews), self.role))  # type: ignore[arg-type]
         body = json.loads(response.body)
         self.assertTrue(body["success"]); self.assertEqual(body["draft"]["state"], "extracted")
+        self.assertTrue(body["extraction_run_id"].startswith("EXR_"))
         self.assertIsNone(body["draft"]["quotation"]["issuer_supplier"]["provisional_candidate_id"])
 
     def test_train_reports_one_of_one_only_on_success(self) -> None:

@@ -1,4 +1,4 @@
-"""Engineering extraction review APIs; command execution is intentionally absent."""
+"""Engineering extraction review and controlled canonical execution APIs."""
 
 from __future__ import annotations
 
@@ -12,7 +12,11 @@ from backend.db.mssql import MSSQLConnectionFactory
 from backend.domain.engineering_review import EngineeringReviewConcurrencyError, EngineeringReviewError
 from backend.repositories.engineering_review_mssql import EngineeringMSSQLDatabase, MSSQLEngineeringReviewRepository
 from backend.services.engineering_review_service import EngineeringReviewNotFoundError, EngineeringReviewService
-from backend.routers.upload import get_training_gateway_role, _write_allowed
+from backend.services.engineering_execution_service import EngineeringExecutionDisabledError, EngineeringExecutionError, EngineeringExecutionService
+from backend.services.opc_tag_manager_client import OpcTagManagerClient
+from backend.services.source_document_provider import TrainingSourceDocumentProvider
+from backend.config.engineering_execution import EngineeringExecutionSettings
+from backend.routers.upload import get_training_gateway_role, get_training_service, _write_allowed
 
 
 router=APIRouter(prefix="/engineering")
@@ -23,6 +27,12 @@ def get_engineering_review_service(request:Request)->EngineeringReviewService:
     if isinstance(configured,EngineeringReviewService):return configured
     database=EngineeringMSSQLDatabase(MSSQLConnectionFactory(MSSQLSettings.from_environment()))
     return EngineeringReviewService(MSSQLEngineeringReviewRepository(database))
+
+def get_engineering_execution_service(request:Request)->EngineeringExecutionService:
+    configured=getattr(request.app.state,"engineering_execution_service",None)
+    if isinstance(configured,EngineeringExecutionService):return configured
+    review=get_engineering_review_service(request)
+    return EngineeringExecutionService(review.repository,OpcTagManagerClient(),TrainingSourceDocumentProvider(get_training_service(request)),EngineeringExecutionSettings.from_environment())
 
 
 def review_json(review,run=None,commands=()):
@@ -39,7 +49,7 @@ def token(value:Any)->bytes:
 
 
 def api_error(error:Exception):
-    status=409 if isinstance(error,EngineeringReviewConcurrencyError) else 404 if isinstance(error,EngineeringReviewNotFoundError) else 400
+    status=403 if isinstance(error,EngineeringExecutionDisabledError) else 409 if isinstance(error,(EngineeringReviewConcurrencyError,EngineeringExecutionError)) else 404 if isinstance(error,EngineeringReviewNotFoundError) else 400
     return JSONResponse(status_code=status,content={"success":False,"error":str(error)})
 
 
@@ -91,5 +101,23 @@ async def cancel_review(review_id:str,request:Request,role:str=Depends(get_train
 def get_commands(review_id:str,request:Request):
     try:
         service=get_engineering_review_service(request); service.get(review_id)
-        return {"success":True,"commands":review_json(service.repository.get_review(review_id),commands=service.repository.list_commands(review_id))["commands"],"execution_available":False}
+        settings=EngineeringExecutionSettings.from_environment()
+        return {"success":True,"commands":review_json(service.repository.get_review(review_id),commands=service.repository.list_commands(review_id))["commands"],"execution_available":settings.write_enabled}
     except (EngineeringReviewError,EngineeringReviewNotFoundError,ValueError) as error:return api_error(error)
+
+@router.post("/reviews/{review_id}/execution/dry-run")
+def dry_run_execution(review_id:str,request:Request,role:str=Depends(get_training_gateway_role)):
+    if denied:=_write_allowed(role):return denied
+    try:return {"success":True,"execution":get_engineering_execution_service(request).dry_run(review_id)}
+    except (EngineeringReviewError,EngineeringReviewNotFoundError,EngineeringExecutionError,ValueError) as error:return api_error(error)
+
+@router.post("/reviews/{review_id}/execution")
+def execute_review(review_id:str,request:Request,role:str=Depends(get_training_gateway_role)):
+    if denied:=_write_allowed(role):return denied
+    try:return {"success":True,"execution":get_engineering_execution_service(request).execute(review_id)}
+    except (EngineeringReviewError,EngineeringReviewNotFoundError,EngineeringExecutionError,ValueError) as error:return api_error(error)
+
+@router.get("/reviews/{review_id}/execution")
+def get_execution(review_id:str,request:Request):
+    try:return {"success":True,"execution":get_engineering_execution_service(request).status(review_id)}
+    except (EngineeringReviewError,EngineeringReviewNotFoundError,EngineeringExecutionError,ValueError) as error:return api_error(error)

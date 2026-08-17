@@ -37,5 +37,22 @@ class ClientTests(unittest.TestCase):
                 client, _ = self.client([payload])
                 with self.assertRaises(OpcTagManagerClientError): client.supplier_candidates(name="ABC")
 
+    def test_phase_410_read_and_allowlisted_write_contracts(self):
+        client,calls=self.client([
+            {"success":True,"state":{"exists":True,"canonical_id":"SUP_1","canonical_revision":"v1:abc"}},
+            {"success":True,"tags":[{"kepware_path":"LP2/MIX/Tag","tag_name":"Tag","levels":["LP2","MIX"],"is_active":True}]},
+            {"success":True,"status":"created","resource_id":"QUO_1","canonical_revision":"v1:def","active_version":1},
+            {"success":True,"status":"already_linked","resource":{"active_file":"quote.pdf"}},
+            {"success":True,"references":{"resource":{"active_file":"ept.md"}}},
+        ])
+        self.assertEqual(client.get_canonical_state("SUP_1")["canonical_revision"],"v1:abc")
+        self.assertEqual(client.search_opc_tags("LP2/MIX/Tag")[0]["tag_name"],"Tag")
+        created=client.create_canonical_resource(resource_type="Quotation",display_name="Quote",source_sha256="a"*64,source_document_id="KM_1",original_filename="quote.pdf",content=b"bytes")
+        self.assertEqual(created["resource_id"],"QUO_1")
+        self.assertNotIn("active_file",json.dumps(client.link_resource_relationship("SUP_1","QUO_1")))
+        self.assertNotIn("active_file",json.dumps(client.link_tag_resource("LP2/MIX/Tag","EPT_1")))
+        self.assertEqual([method for _,method,_ in calls],["GET","GET","POST","POST","POST"])
+        self.assertTrue(all(url.startswith("http://opc.example/api/") for url,_,_ in calls))
+
 
 if __name__ == "__main__": unittest.main()

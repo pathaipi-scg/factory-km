@@ -77,8 +77,28 @@ class MSSQLEngineeringReviewRepository:
 
     def list_commands(self,review_id:str)->tuple[ConfirmedCommand,...]:
         with self.db.connect() as connection:
-            c=connection.cursor(); c.execute("SELECT CommandId,ReviewId,CommandType,PayloadJson,IdempotencyKey,Status,Attempts,LastError,CreatedAt,UpdatedAt,ExpectedCanonicalVersion FROM engineering.Commands WHERE ReviewId=? ORDER BY IdempotencyKey",review_id); rows=c.fetchall()
-        return tuple(ConfirmedCommand(str(r[0]),str(r[1]),str(r[2]),str(r[3]),str(r[4]),CommandStatus(str(r[5])),int(r[6]),r[7],_aware(r[8]),_aware(r[9]),r[10]) for r in rows)
+            c=connection.cursor(); c.execute("SELECT CommandId,ReviewId,CommandType,PayloadJson,IdempotencyKey,Status,Attempts,LastError,CreatedAt,UpdatedAt,ExpectedCanonicalVersion,LeaseId,LeaseExpiresAt,ResultJson,FailureCode,Retriable FROM engineering.Commands WHERE ReviewId=? ORDER BY IdempotencyKey",review_id); rows=c.fetchall()
+        return tuple(ConfirmedCommand(str(r[0]),str(r[1]),str(r[2]),str(r[3]),str(r[4]),CommandStatus(str(r[5])),int(r[6]),r[7],_aware(r[8]),_aware(r[9]),r[10],r[11],_aware(r[12]) if r[12] else None,r[13],r[14],bool(r[15])) for r in rows)
+
+    def get_command(self,command_id):
+        with self.db.connect() as connection:
+            c=connection.cursor();c.execute("SELECT ReviewId FROM engineering.Commands WHERE CommandId=?",command_id);row=c.fetchone()
+        return None if not row else next((x for x in self.list_commands(str(row[0])) if x.command_id==command_id),None)
+
+    def claim_command(self,command_id,lease_id,lease_expires_at,now):
+        with self.db.connect() as connection:
+            c=connection.cursor();c.execute("""UPDATE engineering.Commands WITH(UPDLOCK,SERIALIZABLE) SET Status='executing',LeaseId=?,LeaseExpiresAt=?,Attempts=Attempts+1,LastError=NULL,FailureCode=NULL,UpdatedAt=? OUTPUT inserted.ReviewId WHERE CommandId=? AND Status<>'succeeded' AND (Status<>'executing' OR LeaseExpiresAt IS NULL OR LeaseExpiresAt<=?)""",lease_id,_naive(lease_expires_at),_naive(now),command_id,_naive(now));row=c.fetchone()
+        return None if row is None else self.get_command(command_id)
+
+    def complete_command(self,command):
+        with self.db.connect() as connection:
+            c=connection.cursor();c.execute("""UPDATE engineering.Commands SET Status=?,LeaseId=NULL,LeaseExpiresAt=NULL,ResultJson=?,FailureCode=?,Retriable=?,LastError=?,UpdatedAt=? WHERE CommandId=? AND LeaseId=?""",command.status.value,command.result_json,command.failure_code,1 if command.retriable else 0,command.last_error,_naive(command.updated_at),command.command_id,command.lease_id)
+        return ConfirmedCommand(**{**command.__dict__,"lease_id":None,"lease_expires_at":None})
+
+    def record_event(self,review_id,action,command_id=None,failure_code=None,actor_id=None):
+        from datetime import datetime
+        with self.db.connect() as connection:
+            c=connection.cursor();c.execute("INSERT INTO engineering.ReviewEvents(ReviewId,ActionAt,ActorId,Source,PreviousState,NewState,CommandId,FailureCode) VALUES(?,?,?,?,?,?,?,?)",review_id,_naive(datetime.now(timezone.utc)),actor_id,"factory-km-executor",None,action,command_id,failure_code)
 
     @staticmethod
     def _decisions(review):return json.dumps([{**asdict(x),"kind":x.kind.value,"action":x.action.value} for x in review.decisions],ensure_ascii=False)

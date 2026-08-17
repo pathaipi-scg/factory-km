@@ -750,6 +750,26 @@ ADR-0010
 
 Never modify historical decisions.
 
+## ADR-0012 - Controlled canonical execution with disabled-by-default dual gates
+
+Execute only confirmed persisted commands through a fixed Phase 1 allowlist.
+Factory-KM must pass `ENGINEERING_CANONICAL_WRITE_ENABLED`; OpcTagManager's
+server gate remains independent. Compare reviewed and current canonical
+revisions and verify exact active KepwarePath immediately before mutation.
+Use atomic leases, serial dependency order, structured results, audit events,
+and non-destructive retry. Resolve source bytes through logical `KM_` identity.
+Supplier/Contact/EPT master-data mutation and shared Auth remain deferred.
+
+## ADR-0012 - Controlled canonical execution with disabled-by-default dual gates
+
+Execute only confirmed persisted commands through a fixed Phase 1 allowlist.
+Factory-KM must pass `ENGINEERING_CANONICAL_WRITE_ENABLED`; OpcTagManager's
+server gate remains independent. Compare reviewed and current canonical
+revisions and verify exact active KepwarePath immediately before mutation.
+Use atomic leases, serial dependency order, structured results, audit events,
+and non-destructive retry. Resolve source bytes through logical `KM_` identity.
+Supplier/Contact/EPT master-data mutation and shared Auth remain deferred.
+
 If a decision changes
 
 Create a new ADR referencing the previous one.

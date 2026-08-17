@@ -5,14 +5,18 @@ from types import SimpleNamespace
 
 from backend.main import app
 from backend.repositories.engineering_review_memory import InMemoryEngineeringReviewRepository
-from backend.routers.engineering import create_review, update_review, confirm_review, cancel_review, get_commands
+from backend.routers.engineering import create_review, update_review, confirm_review, cancel_review, get_commands, dry_run_execution, execute_review, get_execution
+from backend.config.engineering_execution import EngineeringExecutionSettings
+from backend.services.engineering_execution_service import EngineeringExecutionService
+from backend.services.source_document_provider import InMemorySourceDocumentProvider
+from tests.test_engineering_execution import FakeOpc
 from backend.services.engineering_review_service import EngineeringReviewService
 from tests.test_engineering_extraction import quotation_payload
 
 
 class Request:
-    def __init__(self,service,payload=None):
-        self.app=SimpleNamespace(state=SimpleNamespace(engineering_review_service=service));self._payload=payload
+    def __init__(self,service,payload=None,execution=None):
+        self.app=SimpleNamespace(state=SimpleNamespace(engineering_review_service=service,engineering_execution_service=execution));self._payload=payload
     async def json(self):return self._payload
 
 
@@ -37,6 +41,16 @@ class ApiTests(unittest.TestCase):
         review=self.body(asyncio.run(create_review(self.run.extraction_run_id,Request(self.service,{}),"factory")))["review"]
         cancelled=self.body(asyncio.run(cancel_review(review["review_id"],Request(self.service,{"concurrency_token":review["concurrency_token"]}),"factory")))
         self.assertEqual(cancelled["review"]["status"],"cancelled")
+
+    def test_execution_api_requires_confirmed_review_and_gate(self):
+        review=self.body(asyncio.run(create_review(self.run.extraction_run_id,Request(self.service,{}),"factory")))["review"]
+        saved=self.body(asyncio.run(update_review(review["review_id"],Request(self.service,{"concurrency_token":review["concurrency_token"],"decisions":[],"intended_kepware_paths":[]}),"factory")))["review"]
+        confirmed=self.body(asyncio.run(confirm_review(review["review_id"],Request(self.service,{"concurrency_token":saved["concurrency_token"]}),"factory")))["review"]
+        execution=EngineeringExecutionService(self.service.repository,FakeOpc(),InMemorySourceDocumentProvider({}),EngineeringExecutionSettings(False,60))
+        request=Request(self.service,execution=execution)
+        self.assertTrue(self.body(dry_run_execution(confirmed["review_id"],request,"factory"))["success"])
+        denied=execute_review(confirmed["review_id"],request,"factory");self.assertEqual(denied.status_code,403)
+        self.assertTrue(self.body(get_execution(confirmed["review_id"],request))["success"])
 
 
 if __name__=="__main__":unittest.main()

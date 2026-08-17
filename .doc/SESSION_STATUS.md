@@ -31,14 +31,14 @@ Implement the Engineering Document Extraction Foundation after the completed
 Training Markdown hook. PageIndex workspace generation, Dictionary, and LLM
 Wiki are paused while this cross-project integration slice is reviewed.
 
-Focus on evidence-bearing Quotation/Manual drafts, read-only OpcTagManager
-candidate lookup, and draft-only human confirmation without canonical writes.
+Focus on evidence-bearing Quotation/Manual drafts, canonical lookup, human
+confirmation, and disabled-by-default controlled canonical execution.
 
 Engineering Review Persistence and Confirmed Operation Command Foundation now
 adds intended central MSSQL `engineering.*` migrations, immutable `EXR_`
 snapshots, rowversion-protected `REV_` workflow state, and deterministic `CMD_`
-commands that stop at READY. No migration was applied and no command executor
-exists.
+commands that initially stopped at READY. No live migration was applied. Phase 1
+executor code is now implemented behind the false-by-default write gate.
 
 ---
 
@@ -213,3 +213,9 @@ Do NOT select or implement Manifest persistence until its backend is approved.
 This file should always reflect the latest project state.
 
 Update this document at the end of every engineering session.
+
+Engineering Controlled Canonical Execution Phase 1 is implemented and awaits
+review. READY commands now support dry-run and gated, allowlisted, leased serial
+execution. Supplier/Contact/EPT master-data commands remain BLOCKED. No live
+gate, migration, Vault write, Azure call, Kepware change, or OpcTagManager
+mutation was used during implementation or testing.

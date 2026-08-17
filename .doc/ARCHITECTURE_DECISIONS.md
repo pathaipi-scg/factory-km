@@ -60,3 +60,21 @@ history, and confirmed operation commands use the central Factory-KM MSSQL
 database in the dedicated `engineering` schema. Mutable reviews use rowversion.
 Confirmation produces idempotent READY commands only; live OpcTagManager
 execution is a separately approved future concern.
+
+ADR-012
+Engineering Controlled Canonical Execution Phase 1 uses a fixed allowlist,
+atomic command leases, serial dependency ordering, structured results, and
+revision/Tag preflight repeated immediately before additive remote mutation.
+`ENGINEERING_CANONICAL_WRITE_ENABLED` defaults false and OpcTagManager retains
+its independent write gate. Trusted source bytes resolve from logical `KM_`
+identity and must match the extraction SHA. Master-data and destructive
+operations remain blocked; shared Auth and production enablement are deferred.
+
+ADR-012
+Engineering Controlled Canonical Execution Phase 1 uses a fixed allowlist,
+atomic command leases, serial dependency ordering, structured results, and
+revision/Tag preflight repeated immediately before additive remote mutation.
+`ENGINEERING_CANONICAL_WRITE_ENABLED` defaults false and OpcTagManager retains
+its independent write gate. Trusted source bytes resolve from logical `KM_`
+identity and must match the extraction SHA. Master-data and destructive
+operations remain blocked; shared Auth and production enablement are deferred.

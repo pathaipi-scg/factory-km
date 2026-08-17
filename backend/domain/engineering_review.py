@@ -30,7 +30,7 @@ class ExtractionRunStatus(str, Enum): CREATED = "created"; REVIEWING = "reviewin
 class ReviewStatus(str, Enum): DRAFT = "draft"; IN_REVIEW = "in_review"; CONFIRMED = "confirmed"; CANCELLED = "cancelled"
 class DecisionAction(str, Enum): USE_EXISTING = "use_existing"; PROPOSE_NEW = "propose_new"; PROPOSE_UPDATE = "propose_update"; IGNORE = "ignore"; NOT_EQUIPMENT_PART = "not_equipment_part"; UNRESOLVED = "unresolved"
 class DecisionKind(str, Enum): SUPPLIER = "supplier"; CONTACT = "contact"; EQUIPMENT_PART = "equipment_part"; MANUAL_EQUIPMENT_PART = "manual_equipment_part"
-class CommandStatus(str, Enum): READY = "ready"; EXECUTING = "executing"; SUCCEEDED = "succeeded"; FAILED = "failed"; CONFLICT = "conflict"; CANCELLED = "cancelled"
+class CommandStatus(str, Enum): READY = "ready"; EXECUTING = "executing"; SUCCEEDED = "succeeded"; FAILED = "failed"; CONFLICT = "conflict"; BLOCKED = "blocked"; CANCELLED = "cancelled"
 
 
 @dataclass(frozen=True)
@@ -89,7 +89,8 @@ class EngineeringReview:
         if self.status in {ReviewStatus.CONFIRMED, ReviewStatus.CANCELLED}: raise EngineeringReviewError("Finalized review cannot be modified.")
         if len({item.target_ref for item in decisions}) != len(decisions): raise EngineeringReviewError("Each review target may have one decision.")
         for path in intended_kepware_paths:
-            if not path.strip() or "\\" in path or "/" in path: raise EngineeringReviewError("KepwarePath is invalid.")
+            parts=path.split("/")
+            if not path.strip() or "\\" in path or len(parts)<3 or any(not part.strip() for part in parts): raise EngineeringReviewError("KepwarePath is invalid.")
         return replace(self, status=ReviewStatus.IN_REVIEW, decisions=decisions, intended_kepware_paths=intended_kepware_paths, updated_at=now or datetime.now(timezone.utc))
 
 
@@ -98,12 +99,22 @@ class ConfirmedCommand:
     command_id: str; review_id: str; command_type: str; payload_json: str; idempotency_key: str
     status: CommandStatus; attempts: int; last_error: str | None; created_at: datetime; updated_at: datetime
     expected_canonical_version: str | None = None
+    lease_id: str | None = None; lease_expires_at: datetime | None = None
+    result_json: str | None = None; failure_code: str | None = None; retriable: bool = False
     @property
     def payload(self) -> dict[str, Any]: return json.loads(self.payload_json)
+    @property
+    def result(self) -> dict[str, Any] | None: return json.loads(self.result_json) if self.result_json else None
 
 
 def prepare_commands(review: EngineeringReview, run: ExtractionRun, now: datetime | None = None) -> tuple[ConfirmedCommand, ...]:
     timestamp = now or datetime.now(timezone.utc); output = []
+    ensure = None
+    if not run.source_resource_id and run.document_type in {"quotation", "manual", "drawing", "general_document"}:
+        ensure = _command(review.review_id, "EnsureCanonicalDocumentResource",
+            {"source_document_id": run.source_document_id, "source_sha256": run.source_sha256,
+             "document_type": run.document_type, "extraction_run_id": run.extraction_run_id}, None, timestamp)
+        output.append(ensure)
     for decision in review.decisions:
         mapping = {
             (DecisionKind.SUPPLIER, DecisionAction.USE_EXISTING): "UseExistingSupplier",
@@ -123,10 +134,12 @@ def prepare_commands(review: EngineeringReview, run: ExtractionRun, now: datetim
         payload = {"target_ref": decision.target_ref, **({"canonical_id": decision.canonical_id} if decision.canonical_id else {})}
         output.append(_command(review.review_id, command_type, payload, decision.expected_canonical_version, timestamp))
         if decision.canonical_id and decision.kind in {DecisionKind.EQUIPMENT_PART, DecisionKind.MANUAL_EQUIPMENT_PART}:
-            if run.source_resource_id: output.append(_command(review.review_id, "LinkResourceToEquipmentPart", {"source_resource_id": run.source_resource_id, "equipment_part_id": decision.canonical_id}, decision.expected_canonical_version, timestamp))
+            source = {"source_resource_id": run.source_resource_id} if run.source_resource_id else ({"source_command_id": ensure.command_id} if ensure else {})
+            if source: output.append(_command(review.review_id, "LinkResourceToEquipmentPart", {**source, "equipment_part_id": decision.canonical_id}, decision.expected_canonical_version, timestamp))
             for path in review.intended_kepware_paths: output.append(_command(review.review_id, "LinkEquipmentPartToTag", {"equipment_part_id": decision.canonical_id, "kepware_path": path}, decision.expected_canonical_version, timestamp))
-        if decision.canonical_id and decision.kind is DecisionKind.SUPPLIER and run.source_resource_id:
-            output.append(_command(review.review_id, "LinkResourceToSupplier", {"source_resource_id": run.source_resource_id, "supplier_id": decision.canonical_id}, decision.expected_canonical_version, timestamp))
+        if decision.canonical_id and decision.kind is DecisionKind.SUPPLIER:
+            source = {"source_resource_id": run.source_resource_id} if run.source_resource_id else ({"source_command_id": ensure.command_id} if ensure else {})
+            if source: output.append(_command(review.review_id, "LinkResourceToSupplier", {**source, "supplier_id": decision.canonical_id}, decision.expected_canonical_version, timestamp))
     return tuple(sorted({item.idempotency_key: item for item in output}.values(), key=lambda item: item.idempotency_key))
 
 

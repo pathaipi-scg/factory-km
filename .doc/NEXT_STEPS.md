@@ -93,3 +93,9 @@ identity, and controlled command execution with retry/audit behavior.
 - Knowledge Graph and Conversation Memory.
 - Confirmed OpcTagManager create/update/link operations, extraction draft
   persistence/orchestration, shared Identity/Auth, and KMVaultManager migration.
+
+Current checkpoint: review Engineering Controlled Canonical Execution Phase 1.
+Before any controlled live validation, separately authorize and apply the
+engineering MSSQL migrations, establish service reachability/authorization,
+deliberately enable both independent write gates in a controlled environment,
+and approve one bounded test document/relationship. Do not do this automatically.

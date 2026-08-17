@@ -41,16 +41,16 @@ implementation status, next steps, or roadmap.
 
 - Engineering Document Extraction Foundation hooks after successful Training
   detail and summary Markdown. It defines evidence-bearing classification,
-  Quotation and Manual review drafts, a GET-only OpcTagManager client, and a
-  draft-only review UI.
+  Quotation and Manual review drafts, a narrowly scoped OpcTagManager client,
+  and a review UI with separately labeled canonical execution state.
 - Factory-KM owns extraction and review. OpcTagManager owns canonical `SUP_`,
   `CNT_`, `EPT_`, Resource, KepwarePath, and engineering relationships.
 - PageIndex workspace generation, Dictionary, and LLM Wiki are paused during
   the current integration focus; their roadmap items remain intact.
 - Engineering review persistence is defined in the central Factory-KM MSSQL
   `engineering` schema with immutable extraction snapshots, rowversion review
-  concurrency, decision history, and idempotent READY command intents. Live
-  schema migration and OpcTagManager command execution are not implemented.
+  concurrency, decision history, idempotent READY command intents, and Phase 1
+  lease/result migration code. Live schema migration and execution remain disabled.
 
 - The architecture foundation milestone is complete.
 - Authentication models, services, MSSQL repositories, session handling,
@@ -134,3 +134,9 @@ implementation status, next steps, or roadmap.
 
 Authentication production cutover remains unfinished even though the current
 authentication implementation phase is complete.
+
+Engineering Controlled Canonical Execution Phase 1 is implemented and awaits
+review. It adds read-only dry-run, canonical revision and Tag preflight, leased
+serial execution, controlled document canonicalization, additive relationship
+operations, structured results/audit, and safe retry after partial failure.
+The execution gate defaults false. No live migration or remote mutation was run.

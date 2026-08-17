@@ -93,8 +93,43 @@ in_review, confirmed, or cancelled. Raw extraction is never rewritten.
 with unique idempotency keys. Confirmation creates READY commands only. No
 executor or canonical OpcTagManager mutation endpoint exists in this phase.
 
-OpcTagManager candidates do not currently guarantee a dedicated canonical
-version/rowversion field. Factory-KM preserves any version metadata returned,
-but future controlled execution requires an authoritative canonical revision
-contract. A read-only Kepware Tag search API is also not currently available;
-KepwarePath can only be entered explicitly for future intent preparation.
+OpcTagManager Phase 4.10 now supplies `canonical_revision`, generic canonical
+state reads, bounded OPC Tag search, controlled document canonicalization, and
+the existing additive relationship APIs.
+
+## Controlled canonical execution - Phase 1
+
+A confirmed review remains distinct from remote execution. Only persisted
+READY commands are eligible for the serial lifecycle `claim -> preflight ->
+mutation -> succeeded/conflict/failed`. Execution is disabled by default with
+`ENGINEERING_CANONICAL_WRITE_ENABLED=false`; dry-run remains available and
+never claims commands or calls a mutation API. OpcTagManager retains its
+independent `KM_RESOURCE_WRITE_ENABLED` server gate.
+
+The allowlist contains existing-identity validation, source-document
+canonicalization, and additive Resource/Supplier, Resource/EPT, and EPT/Tag
+relationships. Supplier, Contact, and EPT create/update proposals and all
+unlink/delete/retire/merge operations are blocked for a future master-data
+phase. There is no arbitrary HTTP command facility.
+
+Every existing canonical selection is re-read immediately before mutation.
+The reviewed `canonical_revision` must equal current state; Contact selections
+use the owning Supplier revision. Exact KepwarePath search must return the
+same active path. Stale, missing, inactive, unsafe, or ambiguous state becomes
+CONFLICT and is never silently refreshed.
+
+Original bytes are obtained through a `SourceDocumentProvider` using the
+logical `KM_...` source identity. The Training adapter performs the trusted
+Vault resolution internally and verifies the extraction SHA-256. Commands do
+not contain bytes or absolute paths. Document canonicalization supports
+quotation, manual, drawing, and general_document through
+`POST /api/integration/resources`; similarity requiring human choice becomes
+CONFLICT.
+
+Command claiming uses a lease, attempt counter, and atomic repository method.
+SQL Server uses transaction-safe update locks; expired leases are recoverable.
+Structured result/failure metadata and audit events are persisted. Execution
+is serial and dependency ordered. Completed remote operations are never
+compensated destructively; retry skips SUCCEEDED commands and resumes from the
+safe point. Production enablement still requires separate operational and
+service-authorization approval; shared Identity/Auth remains deferred.

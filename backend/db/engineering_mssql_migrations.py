@@ -46,7 +46,7 @@ IF OBJECT_ID(N'engineering.Commands', N'U') IS NULL BEGIN
   RowVersion ROWVERSION NOT NULL,
   CONSTRAINT FK_engineering_Commands_Review FOREIGN KEY(ReviewId) REFERENCES engineering.Reviews(ReviewId),
   CONSTRAINT CK_engineering_Commands_Payload CHECK(ISJSON(PayloadJson)=1),
-  CONSTRAINT CK_engineering_Commands_Status CHECK(Status IN('ready','executing','succeeded','failed','conflict','cancelled')),
+  CONSTRAINT CK_engineering_Commands_Status CHECK(Status IN('ready','executing','succeeded','failed','conflict','blocked','cancelled')),
   CONSTRAINT CK_engineering_Commands_Attempts CHECK(Attempts>=0)
  );
  CREATE UNIQUE INDEX UX_engineering_Commands_Idempotency ON engineering.Commands(IdempotencyKey);
@@ -61,6 +61,18 @@ IF OBJECT_ID(N'engineering.ReviewEvents', N'U') IS NULL BEGIN
  );
  CREATE INDEX IX_engineering_ReviewEvents_Review ON engineering.ReviewEvents(ReviewId,ActionAt);
 END;
+"""),(2,"""
+IF COL_LENGTH('engineering.Commands','LeaseId') IS NULL ALTER TABLE engineering.Commands ADD LeaseId NVARCHAR(64) NULL;
+IF COL_LENGTH('engineering.Commands','LeaseExpiresAt') IS NULL ALTER TABLE engineering.Commands ADD LeaseExpiresAt DATETIME2(7) NULL;
+IF COL_LENGTH('engineering.Commands','ResultJson') IS NULL ALTER TABLE engineering.Commands ADD ResultJson NVARCHAR(MAX) NULL;
+IF COL_LENGTH('engineering.Commands','FailureCode') IS NULL ALTER TABLE engineering.Commands ADD FailureCode NVARCHAR(128) NULL;
+IF COL_LENGTH('engineering.Commands','Retriable') IS NULL ALTER TABLE engineering.Commands ADD Retriable BIT NOT NULL CONSTRAINT DF_engineering_Commands_Retriable DEFAULT 0;
+IF COL_LENGTH('engineering.ReviewEvents','CommandId') IS NULL ALTER TABLE engineering.ReviewEvents ADD CommandId NVARCHAR(36) NULL;
+IF COL_LENGTH('engineering.ReviewEvents','FailureCode') IS NULL ALTER TABLE engineering.ReviewEvents ADD FailureCode NVARCHAR(128) NULL;
+IF EXISTS(SELECT 1 FROM sys.check_constraints WHERE name='CK_engineering_Commands_Status') ALTER TABLE engineering.Commands DROP CONSTRAINT CK_engineering_Commands_Status;
+ALTER TABLE engineering.Commands ADD CONSTRAINT CK_engineering_Commands_Status CHECK(Status IN('ready','executing','succeeded','failed','conflict','blocked','cancelled'));
+IF NOT EXISTS(SELECT 1 FROM sys.check_constraints WHERE name='CK_engineering_Commands_ResultJson') ALTER TABLE engineering.Commands ADD CONSTRAINT CK_engineering_Commands_ResultJson CHECK(ResultJson IS NULL OR ISJSON(ResultJson)=1);
+IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE name='IX_engineering_Commands_Lease' AND object_id=OBJECT_ID('engineering.Commands')) CREATE INDEX IX_engineering_Commands_Lease ON engineering.Commands(Status,LeaseExpiresAt,CreatedAt);
 """),)
 
 

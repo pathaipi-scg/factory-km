@@ -467,6 +467,19 @@ class TrainingService:
         return TrainedKmInput(km_id, source_file, hashlib.sha256(source_path.read_bytes()).hexdigest(),
                               detail, summary_path.read_text(encoding="utf-8"))
 
+    def read_source_content(self, km_id: str) -> tuple[str, bytes]:
+        """Resolve trusted source bytes from a logical KM identity only."""
+        path = self._find_markdown(km_id)
+        detail = path.read_text(encoding="utf-8")
+        if _metadata_value(detail, "Training_Status") != "Trained": raise TrainingError(f"{km_id}: KM is not successfully trained")
+        source_file = _metadata_value(detail, "Source_File")
+        if Path(source_file).name != source_file or not source_file: raise TrainingError(f"{km_id}: source filename is invalid")
+        source_path = (path.parent / source_file).resolve()
+        try: source_path.relative_to(self.vault_root)
+        except ValueError as error: raise TrainingError(f"{km_id}: source document path is unsafe") from error
+        if not source_path.is_file(): raise TrainingError(f"{km_id}: source document not found")
+        return source_file, source_path.read_bytes()
+
     def _find_markdown(self, km_id: str) -> Path:
         if not KM_NAME.fullmatch(km_id):
             raise TrainingError("Invalid kmId")

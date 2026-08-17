@@ -46,7 +46,7 @@ class EngineeringReviewTests(unittest.TestCase):
                    {"target_ref":"contact-1","kind":"contact","action":"ignore"},
                    {"target_ref":"line-1-ept","kind":"equipment_part","action":"use_existing","canonical_id":"EPT_1"},
                    {"target_ref":"line-2","kind":"equipment_part","action":"not_equipment_part"}]
-        updated=self.service.update(review.review_id,decisions,["LP2.MIX.Tag"],review.concurrency_token)
+        updated=self.service.update(review.review_id,decisions,["LP2/MIX/Tag"],review.concurrency_token)
         confirmed,commands=self.service.confirm(updated.review_id,updated.concurrency_token)
         again,duplicates=self.service.confirm(updated.review_id,confirmed.concurrency_token)
         self.assertEqual(confirmed.status,ReviewStatus.CONFIRMED); self.assertEqual([x.command_id for x in commands],[x.command_id for x in duplicates])
